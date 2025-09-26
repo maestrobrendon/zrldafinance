@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 
 const actions = [
-  { label: "Budget", icon: Icons.target },
+  { label: "Add", icon: Icons.add },
   { label: "Transfer", icon: Icons.send },
-  { label: "Fund", icon: Icons.add },
+  { label: "Fund", icon: Icons.creditCard },
   { label: "Withdraw", icon: Icons.history },
 ];
 
