@@ -11,23 +11,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
 import { SidebarTrigger } from '../ui/sidebar';
 import { user } from '@/lib/data';
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
-      <SidebarTrigger className="md:hidden" />
-      <div className="relative flex-1">
-        <Icons.search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search..."
-          className="w-full rounded-lg bg-card pl-8 md:w-[200px] lg:w-[320px]"
-        />
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur sm:px-6 md:hidden">
+      <SidebarTrigger />
+      <div className="flex-1 text-center">
+        <AppLogo className="justify-center" />
       </div>
+      <div className="flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="relative rounded-full">
@@ -75,6 +70,9 @@ export default function Header() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </header>
   );
 }
+
+import { AppLogo } from '../app-logo';

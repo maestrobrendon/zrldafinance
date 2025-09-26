@@ -20,8 +20,7 @@ const navItems = [
   { href: "/dashboard", icon: Icons.dashboard, label: "Dashboard" },
   { href: "/wallets", icon: Icons.wallet, label: "Wallets" },
   { href: "/circles", icon: Icons.users, label: "Circles" },
-  { href: "/transactions", icon: Icons.transactions, label: "Transactions" },
-  { href: "/settings", icon: Icons.settings, label: "Settings" },
+  { href: "/transactions", icon: Icons.transactions, label: "History" },
 ];
 
 export default function AppSidebar() {
@@ -53,16 +52,18 @@ export default function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-         <div className="flex items-center gap-3 p-2">
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="avatar" />
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="overflow-hidden">
-                <p className="font-medium text-sm truncate">{user.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+         <Link href="/settings" className="block w-full">
+            <div className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
+                <Avatar className="h-9 w-9">
+                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="avatar" />
+                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="overflow-hidden">
+                    <p className="font-medium text-sm truncate">{user.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
             </div>
-         </div>
+         </Link>
       </SidebarFooter>
     </Sidebar>
   );

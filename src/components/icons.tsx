@@ -18,6 +18,12 @@ import {
   LogOut,
   User as UserIcon,
   Menu,
+  Target,
+  History,
+  ShoppingCart,
+  Utensils,
+  Bolt,
+  Plane
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -55,4 +61,12 @@ export const Icons = {
   logout: LogOut,
   user: UserIcon,
   menu: Menu,
+  target: Target,
+  history: History,
+  entertainment: BarChart3,
+  shoppingCart: ShoppingCart,
+  utensils: Utensils,
+  bolt: Bolt,
+  plane: Plane,
+  shoppingBag: Wallet,
 };

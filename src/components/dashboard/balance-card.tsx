@@ -1,11 +1,7 @@
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Icons } from "@/components/icons";
 
 interface BalanceCardProps {
   balance: number;
@@ -14,22 +10,19 @@ interface BalanceCardProps {
 
 export default function BalanceCard({ balance, currency }: BalanceCardProps) {
   return (
-    <Card className="bg-primary text-primary-foreground shadow-lg">
-      <CardHeader>
-        <CardDescription className="text-primary-foreground/80">
-          Main Account Balance
-        </CardDescription>
-        <CardTitle className="text-4xl font-bold tracking-tighter">
-          {new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: currency,
-          }).format(balance)}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center text-xs">
-          <Icons.creditCard className="mr-2 h-4 w-4" />
-          <span>**** **** **** 1234</span>
+    <Card className="shadow-lg">
+      <CardContent className="pt-6">
+        <p className="text-sm text-muted-foreground mb-1">
+          Main Wallet Balance
+        </p>
+        <div className="flex items-baseline gap-2">
+          <p className="text-4xl font-bold tracking-tighter">
+            {new Intl.NumberFormat("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(balance)}
+          </p>
+          <p className="text-lg font-semibold text-muted-foreground">{currency}</p>
         </div>
       </CardContent>
     </Card>
