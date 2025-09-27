@@ -6,10 +6,10 @@ import { mainBalance, sharedExpenses, transactions, user, wallets } from "@/lib/
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/icons";
 import { formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import WalletBreakdown from "@/components/dashboard/wallet-breakdown";
 
 const iconMap: { [key: string]: React.FC<any> } = {
   Entertainment: Icons.entertainment,
@@ -158,6 +158,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <WalletBreakdown />
 
       <div>
         <div className="flex justify-between items-center mb-4">
