@@ -23,10 +23,10 @@ const iconMap: { [key: string]: React.FC<any> } = {
 };
 
 const quickActions = [
-    { label: "Send to", icon: Icons.send },
-    { label: "Request", icon: Icons.dollarSign },
-    { label: "Top up", icon: Icons.creditCard },
-    { label: "More", icon: Icons.grid },
+    { label: "Transfer", icon: Icons.send },
+    { label: "Fund", icon: Icons.add },
+    { label: "Budget", icon: Icons.target },
+    { label: "Withdraw", icon: Icons.history },
 ];
 
 export default function DashboardPage() {
