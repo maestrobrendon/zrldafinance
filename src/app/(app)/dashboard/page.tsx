@@ -1,19 +1,16 @@
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { mainBalance, sharedExpenses, transactions, user, wallets } from "@/lib/data";
-import BalanceCard from "@/components/dashboard/balance-card";
-import QuickActions from "@/components/dashboard/quick-actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/icons";
 import { formatDistanceToNow } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const iconMap: { [key: string]: React.FC<any> } = {
   Entertainment: Icons.entertainment,
@@ -26,18 +23,76 @@ const iconMap: { [key: string]: React.FC<any> } = {
   Other: Icons.more,
 };
 
+const quickActions = [
+    { label: "Send to", icon: Icons.send },
+    { label: "Request", icon: Icons.dollarSign },
+    { label: "Top up", icon: Icons.creditCard },
+    { label: "More", icon: Icons.grid },
+];
+
 export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Hi, {user.name.split(' ')[0]}</h1>
-          <p className="text-muted-foreground">KYC: Level 1</p>
+         <Link href="/settings">
+            <Avatar className="h-10 w-10">
+            <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="avatar" />
+            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+        </Link>
+        <div className="text-center">
+            <p className="text-sm text-muted-foreground">Welcome,</p>
+            <h1 className="text-xl font-bold tracking-tight">{user.name}</h1>
         </div>
+        <Button variant="ghost" size="icon" className="relative rounded-full">
+            <Icons.notification className="h-6 w-6" />
+            <span className="absolute top-1 right-1 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-background"></span>
+            </span>
+        </Button>
       </div>
+
+       <Tabs defaultValue="balance" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-card p-1">
+          <TabsTrigger value="balance">Balance</TabsTrigger>
+          <TabsTrigger value="wallet">Wallet</TabsTrigger>
+        </TabsList>
+        <TabsContent value="balance" className="mt-4">
+            <Card className="shadow-lg bg-primary text-primary-foreground relative overflow-hidden">
+                <div className="absolute top-0 right-0 h-24 w-24 bg-white/10 rounded-full -mt-8 -mr-8"></div>
+                <div className="absolute bottom-0 left-0 h-32 w-32 bg-white/10 rounded-full -mb-16 -ml-16"></div>
+                <CardContent className="pt-6 text-center">
+                    <p className="text-sm text-primary-foreground/80 mb-1">
+                    Total balance
+                    </p>
+                    <div className="flex items-baseline justify-center gap-2">
+                    <p className="text-4xl font-bold tracking-tighter">
+                        {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: mainBalance.currency,
+                        }).format(mainBalance.balance)}
+                    </p>
+                    </div>
+                </CardContent>
+            </Card>
+        </TabsContent>
+      </Tabs>
       
-      <BalanceCard balance={mainBalance.balance} currency={mainBalance.currency} />
-      <QuickActions />
+      <div className="grid grid-cols-4 gap-4">
+        {quickActions.map((action) => (
+            <div key={action.label} className="flex flex-col items-center gap-2">
+            <Button
+                variant="outline"
+                size="icon"
+                className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
+            >
+                <action.icon className="h-6 w-6 text-primary" />
+            </Button>
+            <span className="text-sm font-medium">{action.label}</span>
+            </div>
+        ))}
+        </div>
 
       <div>
         <div className="flex justify-between items-center mb-4">

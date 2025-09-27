@@ -26,6 +26,7 @@ import {
   Plane,
   Replace,
   ScanLine,
+  Grid,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -72,7 +73,6 @@ export const Icons = {
   plane: Plane,
   shoppingBag: Wallet,
   move: Replace,
-  scan: ScanLine
+  scan: ScanLine,
+  grid: Grid,
 };
-
-    
