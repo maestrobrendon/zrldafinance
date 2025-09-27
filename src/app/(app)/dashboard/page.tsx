@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/icons";
 import { formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const iconMap: { [key: string]: React.FC<any> } = {
   Entertainment: Icons.entertainment,
@@ -53,31 +52,23 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-       <Tabs defaultValue="balance" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-card p-1">
-          <TabsTrigger value="balance">Balance</TabsTrigger>
-          <TabsTrigger value="wallet">Wallet</TabsTrigger>
-        </TabsList>
-        <TabsContent value="balance" className="mt-4">
-            <Card className="shadow-lg bg-primary text-primary-foreground relative overflow-hidden">
-                <div className="absolute top-0 right-0 h-24 w-24 bg-white/10 rounded-full -mt-8 -mr-8"></div>
-                <div className="absolute bottom-0 left-0 h-32 w-32 bg-white/10 rounded-full -mb-16 -ml-16"></div>
-                <CardContent className="pt-6 text-center">
-                    <p className="text-sm text-primary-foreground/80 mb-1">
-                    Total balance
-                    </p>
-                    <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-4xl font-bold tracking-tighter">
-                        {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: mainBalance.currency,
-                        }).format(mainBalance.balance)}
-                    </p>
-                    </div>
-                </CardContent>
-            </Card>
-        </TabsContent>
-      </Tabs>
+      <Card className="shadow-lg bg-primary text-primary-foreground relative overflow-hidden">
+          <div className="absolute top-0 right-0 h-24 w-24 bg-white/10 rounded-full -mt-8 -mr-8"></div>
+          <div className="absolute bottom-0 left-0 h-32 w-32 bg-white/10 rounded-full -mb-16 -ml-16"></div>
+          <CardContent className="pt-6 text-center">
+              <p className="text-sm text-primary-foreground/80 mb-1">
+              Total balance
+              </p>
+              <div className="flex items-baseline justify-center gap-2">
+              <p className="text-4xl font-bold tracking-tighter">
+                  {new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: mainBalance.currency,
+                  }).format(mainBalance.balance)}
+              </p>
+              </div>
+          </CardContent>
+      </Card>
       
       <div className="grid grid-cols-4 gap-4">
         {quickActions.map((action) => (
