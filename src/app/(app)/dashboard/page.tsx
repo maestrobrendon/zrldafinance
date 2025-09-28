@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import WalletBreakdown from "@/components/dashboard/wallet-breakdown";
+import AnalyticsSection from "@/components/dashboard/analytics-section";
 import DashboardTabs from "@/components/dashboard/dashboard-tabs";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
@@ -94,7 +94,7 @@ export default function DashboardPage() {
 
       <DashboardTabs />
 
-      <WalletBreakdown />
+      <AnalyticsSection />
 
        <div>
         <div className="flex justify-between items-center mb-4">

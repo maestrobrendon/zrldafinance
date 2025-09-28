@@ -4,6 +4,7 @@
 import * as React from "react"
 import { Lock } from "lucide-react"
 import { Pie, PieChart, Cell } from "recharts"
+import Link from "next/link";
 
 import {
   Card,
@@ -27,14 +28,14 @@ const chartData = [
 
 const totalValue = chartData.reduce((acc, curr) => acc + curr.value, 0)
 
-export default function WalletBreakdown() {
+export default function AnalyticsSection() {
   return (
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
         <div className="flex w-full items-center justify-between">
-            <CardTitle>Wallet Breakdown</CardTitle>
-            <Button variant="ghost" size="icon" className="rounded-full">
-                <Icons.filter className="h-5 w-5" />
+            <CardTitle>Analytics</CardTitle>
+            <Button variant="link" asChild>
+                <Link href="/analytics">View All</Link>
             </Button>
         </div>
       </CardHeader>
