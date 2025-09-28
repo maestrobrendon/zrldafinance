@@ -24,6 +24,13 @@ export type Transaction = {
   status: 'completed' | 'pending' | 'failed';
 };
 
+export type WalletActivity = {
+  id: string;
+  description: string;
+  date: string;
+  category: 'Wallet';
+};
+
 export type SharedExpense = {
   id: string;
   description: string;
@@ -67,6 +74,10 @@ export const transactions: Transaction[] = [
   { id: 't4', description: 'Starbucks Coffee', amount: 5.75, date: '2024-07-24', category: 'Restaurants', type: 'expense', status: 'completed' },
   { id: 't5', description: 'Electricity Bill', amount: 75.00, date: '2024-07-22', category: 'Utilities', type: 'expense', status: 'pending' },
   { id: 't6', description: 'Concert Tickets', amount: 250.00, date: '2024-07-20', category: 'Entertainment', type: 'expense', status: 'completed' },
+];
+
+export const walletActivities: WalletActivity[] = [
+    { id: 'wa1', description: 'Created new wallet: "Car Savings"', date: '2024-07-29', category: 'Wallet' },
 ];
 
 export const sharedExpenses: SharedExpense[] = [

@@ -3,7 +3,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, user, transactions } from "@/lib/data";
+import { mainBalance, user, transactions, walletActivities } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
@@ -29,10 +29,14 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
   Travel: Icons.plane,
   Income: Icons.dollarSign,
   Other: Icons.grid,
+  Wallet: Icons.wallet,
 };
 
 
 export default function DashboardPage() {
+  const combinedActivity = [...transactions, ...walletActivities]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -101,31 +105,35 @@ export default function DashboardPage() {
         </div>
         <Card className="bg-card/50">
           <CardContent className="pt-6 space-y-4">
-            {transactions.slice(0, 3).map((transaction, index) => {
-               const Icon = categoryIcons[transaction.category] || Icons.grid;
+            {combinedActivity.slice(0, 4).map((activity, index) => {
+               const Icon = categoryIcons[activity.category] || Icons.grid;
+               const isTransaction = 'amount' in activity;
+
                return (
-                <div key={transaction.id}>
+                <div key={activity.id}>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="bg-primary/20 text-primary p-3 rounded-lg">
                                 <Icon className="h-5 w-5" />
                             </div>
                             <div>
-                                <p className="font-medium">{transaction.description}</p>
+                                <p className="font-medium">{activity.description}</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {format(new Date(transaction.date), 'MMM d, yyyy')}
+                                    {format(new Date(activity.date), 'MMM d, yyyy')}
                                 </p>
                             </div>
                         </div>
-                        <p className={`font-medium ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
-                        {transaction.type === 'income' ? '+' : '-'}
-                        {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                        }).format(transaction.amount)}
-                        </p>
+                        {isTransaction && (
+                          <p className={`font-medium ${activity.type === 'income' ? 'text-green-500' : ''}`}>
+                            {activity.type === 'income' ? '+' : '-'}
+                            {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "USD",
+                            }).format(activity.amount)}
+                          </p>
+                        )}
                     </div>
-                    {index < transactions.slice(0, 3).length - 1 && <Separator className="mt-4 bg-border/50" />}
+                    {index < combinedActivity.slice(0, 4).length - 1 && <Separator className="mt-4 bg-border/50" />}
                 </div>
                )
             })}
