@@ -1,14 +1,17 @@
+
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, user } from "@/lib/data";
+import { mainBalance, user, transactions } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import WalletBreakdown from "@/components/dashboard/wallet-breakdown";
 import DashboardTabs from "@/components/dashboard/dashboard-tabs";
+import { format } from "date-fns";
+import { Separator } from "@/components/ui/separator";
 
 const quickActions = [
     { label: "Send to", icon: Icons.send },
@@ -16,6 +19,18 @@ const quickActions = [
     { label: "Budget", icon: Icons.target },
     { label: "Withdraw", icon: Icons.history },
 ];
+
+const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
+  Entertainment: Icons.entertainment,
+  Shopping: Icons.shoppingBag,
+  Groceries: Icons.shoppingCart,
+  Restaurants: Icons.utensils,
+  Utilities: Icons.bolt,
+  Travel: Icons.plane,
+  Income: Icons.dollarSign,
+  Other: Icons.grid,
+};
+
 
 export default function DashboardPage() {
   return (
@@ -76,6 +91,47 @@ export default function DashboardPage() {
       <DashboardTabs />
 
       <WalletBreakdown />
+
+       <div>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold tracking-tight">Recent Activity</h2>
+          <Button variant="link" asChild>
+            <Link href="/transactions">View All</Link>
+          </Button>
+        </div>
+        <Card className="bg-card/50">
+          <CardContent className="pt-6 space-y-4">
+            {transactions.slice(0, 3).map((transaction, index) => {
+               const Icon = categoryIcons[transaction.category] || Icons.grid;
+               return (
+                <div key={transaction.id}>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-primary/20 text-primary p-3 rounded-lg">
+                                <Icon className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p className="font-medium">{transaction.description}</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {format(new Date(transaction.date), 'MMM d, yyyy')}
+                                </p>
+                            </div>
+                        </div>
+                        <p className={`font-medium ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
+                        {transaction.type === 'income' ? '+' : '-'}
+                        {new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: "USD",
+                        }).format(transaction.amount)}
+                        </p>
+                    </div>
+                    {index < transactions.slice(0, 3).length - 1 && <Separator className="mt-4 bg-border/50" />}
+                </div>
+               )
+            })}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
