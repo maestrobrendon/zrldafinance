@@ -127,38 +127,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold tracking-tight">My Circles</h2>
-          <Button variant="link" asChild>
-            <Link href="/circles">View All</Link>
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            {sharedExpenses.slice(0, 1).map((expense) => (
-              <div key={expense.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/20 text-primary p-3 rounded-full">
-                    <Icons.users className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">{expense.circle}</p>
-                    <p className="text-sm text-muted-foreground">{expense.date}</p>
-                  </div>
-                </div>
-                <p className="font-bold text-lg">
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                  }).format(expense.totalAmount)}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
       <WalletBreakdown />
 
       <div>
