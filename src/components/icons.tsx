@@ -66,8 +66,8 @@ export const Icons = {
       strokeLinejoin="round"
       {...props}
     >
-      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm2.24 14.28L12 14.54l-2.24 1.74a1 1 0 0 1-1.42-1.21l.84-2.73-1.95-1.9a1 1 0 0 1 .55-1.7h2.8l1.34-2.46a1 1 0 0 1 1.78 0l1.34 2.46h2.8a1 1 0 0 1 .55 1.7l-1.95 1.9.84 2.73a1 1 0 0 1-1.42 1.21z" />
-       <path d="M12 7.5V12" />
+      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 13.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
+      <path d="M12 7.5V12h2.25" />
     </svg>
   ),
   receive: ArrowDownLeft,
@@ -81,7 +81,7 @@ export const Icons = {
   user: UserIcon,
   menu: Menu,
   target: Target,
-  history: ArrowDownLeft,
+  history: History,
   entertainment: BarChart3,
   shoppingCart: ShoppingCart,
   utensils: Utensils,
