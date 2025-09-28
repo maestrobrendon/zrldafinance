@@ -1,10 +1,12 @@
 
+
 "use client"
 
 import * as React from "react"
 import { Lock } from "lucide-react"
 import { Pie, PieChart, Cell } from "recharts"
 import Link from "next/link";
+import { wallets as allWallets, Wallet } from "@/lib/data";
 
 import {
   Card,
@@ -17,22 +19,53 @@ import {
 } from "@/components/ui/chart"
 import { Button } from "../ui/button"
 
-const chartData = [
-  { name: "Data", value: 70000.00, fill: "hsl(var(--chart-1))", locked: true },
-  { name: "Groceries", value: 65000.00, fill: "hsl(var(--chart-2))" },
-  { name: "Others1", value: 15000.00, fill: "hsl(var(--chart-3))" },
-  { name: "Others2", value: 10000.00, fill: "hsl(var(--chart-4))" },
-  { name: "Others3", value: 5000.00, fill: "hsl(var(--chart-5))" },
-]
+const chartColors = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+];
 
-const totalValue = chartData.reduce((acc, curr) => acc + curr.value, 0)
-
-const viewModes = ["By Size", "By Time", "By Status"];
-const filters = ["All", "Locked", "Unlocked", "Shared", "With Goals"];
+const viewModes = ["By Size", "By Goal"];
+const filters = ["All", "With Goals", "No Goals"];
 
 export default function AnalyticsSection() {
     const [activeViewMode, setActiveViewMode] = React.useState("By Size");
     const [activeFilter, setActiveFilter] = React.useState("All");
+    const [chartData, setChartData] = React.useState<any[]>([]);
+
+    React.useEffect(() => {
+        let filteredWallets: Wallet[] = [...allWallets];
+
+        if (activeFilter === "With Goals") {
+            filteredWallets = allWallets.filter(w => w.goal);
+        } else if (activeFilter === "No Goals") {
+            filteredWallets = allWallets.filter(w => !w.goal);
+        }
+
+        if (activeViewMode === "By Goal") {
+            filteredWallets = filteredWallets.filter(w => w.goal);
+        }
+        
+        let sortedWallets = filteredWallets;
+        if (activeViewMode === 'By Goal') {
+            sortedWallets = [...filteredWallets].sort((a, b) => (b.goal || 0) - (a.goal || 0));
+        } else { // By Size
+            sortedWallets = [...filteredWallets].sort((a, b) => b.balance - a.balance);
+        }
+
+        const data = sortedWallets.map((wallet, index) => ({
+            name: wallet.name,
+            value: activeViewMode === 'By Goal' ? wallet.goal : wallet.balance,
+            fill: chartColors[index % chartColors.length],
+            locked: !!wallet.goal,
+        }));
+        
+        setChartData(data);
+    }, [activeViewMode, activeFilter]);
+
+    const totalValue = chartData.reduce((acc, curr) => acc + curr.value, 0)
 
   return (
     <Card className="flex flex-col">
@@ -80,31 +113,37 @@ export default function AnalyticsSection() {
             </div>
         </div>
 
-        <ChartContainer
-          config={{}}
-          className="mx-auto aspect-square h-[250px]"
-        >
-          <PieChart>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={60}
-              strokeWidth={5}
+        {chartData.length > 0 ? (
+            <ChartContainer
+            config={{}}
+            className="mx-auto aspect-square h-[250px]"
             >
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.fill}
-                  className="focus:outline-none"
-                />
-              ))}
-            </Pie>
-          </PieChart>
-        </ChartContainer>
+            <PieChart>
+                <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={60}
+                strokeWidth={5}
+                >
+                {chartData.map((entry, index) => (
+                    <Cell
+                    key={`cell-${index}`}
+                    fill={entry.fill}
+                    className="focus:outline-none"
+                    />
+                ))}
+                </Pie>
+            </PieChart>
+            </ChartContainer>
+        ) : (
+            <div className="mx-auto aspect-square h-[250px] flex items-center justify-center">
+                <p className="text-muted-foreground">No data to display for this filter.</p>
+            </div>
+        )}
 
          <div className="space-y-2">
-          {chartData.slice(0, 2).map((entry) => (
+          {chartData.slice(0, 5).map((entry) => (
             <div key={entry.name} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div
@@ -118,9 +157,11 @@ export default function AnalyticsSection() {
                 <p className="text-sm font-medium">
                   {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(entry.value)}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {((entry.value / totalValue) * 100).toFixed(1)}%
-                </p>
+                {totalValue > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                        {((entry.value / totalValue) * 100).toFixed(1)}%
+                    </p>
+                )}
               </div>
             </div>
           ))}
