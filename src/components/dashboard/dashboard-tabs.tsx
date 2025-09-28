@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from "react";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/icons";
 import Link from "next/link";
 import { budgets, goals, circles } from "@/lib/data";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 type Tab = "budget" | "goals" | "circles";
 
@@ -122,25 +124,44 @@ export default function DashboardTabs() {
             {circles.map((item) => (
               <Link href="/circles" key={item.id} className="block">
                 <Card className="bg-card/50 hover:bg-card/80 transition-colors">
-                  <CardContent className="p-4">
-                     <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-bold text-lg">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.date} &middot;{" "}
-                          {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                          }).format(item.amount)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.members} Members
-                        </p>
-                      </div>
-                      <Badge variant={
-                          item.status === 'ACTIVE' ? 'default' :
-                          item.status === 'UPCOMING' ? 'secondary' : 'outline'
-                      }>{item.status}</Badge>
+                  <CardContent className="p-4 space-y-4">
+                    <div className="flex items-center space-x-2">
+                        {item.memberAvatars.map((avatar, index) => (
+                            <Avatar key={index} className="h-6 w-6 border-2 border-background">
+                                <AvatarImage src={avatar} alt="member" data-ai-hint="avatar" />
+                                <AvatarFallback></AvatarFallback>
+                            </Avatar>
+                        ))}
+                    </div>
+                    <div>
+                        <p className="font-semibold text-lg">{item.name}</p>
+                        <div className="flex justify-between items-baseline">
+                            <p className="text-2xl font-bold">
+                                {new Intl.NumberFormat("en-US", {
+                                    style: "currency",
+                                    currency: "USD",
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                }).format(item.amount)}
+                            </p>
+                            <div className="text-right">
+                                <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-none mb-1">{item.status}</Badge>
+                                <p className="text-lg font-semibold">{item.progress}%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <Progress value={item.progress} className="h-2 [&>div]:bg-purple-600" />
+                     <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>
+                            {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "USD",
+                            }).format(item.contributed)} / {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency: "USD",
+                            }).format(item.amount)}
+                        </span>
+                        <span>{item.daysLeft} days left</span>
                     </div>
                   </CardContent>
                 </Card>

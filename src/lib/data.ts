@@ -1,3 +1,4 @@
+
 export type User = {
   name: string;
   email: string;
@@ -30,6 +31,17 @@ export type SharedExpense = {
   yourShare: number;
   date: string;
   circle: string;
+};
+
+export type Circle = {
+  id: string;
+  name: string;
+  amount: number;
+  contributed: number;
+  progress: number;
+  daysLeft: number;
+  status: "ACTIVE" | "UPCOMING" | "PAST";
+  memberAvatars: string[];
 };
 
 export const user: User = {
@@ -84,29 +96,61 @@ export const goals = [
     { id: 'w3', name: 'New Gadgets', amount: 1000, saved: 450.00, progress: 45 },
 ];
 
-export const circles = [
+export const circles: Circle[] = [
   {
     id: "1",
-    name: "Night Out w/the Boys!",
-    date: "April 19",
-    amount: 1500,
-    members: 5,
+    name: "Marriage Contribution",
+    amount: 25000,
+    contributed: 19562.00,
+    progress: 88,
+    daysLeft: 65,
     status: "ACTIVE",
+    memberAvatars: [
+        'https://picsum.photos/seed/10/100/100',
+        'https://picsum.photos/seed/11/100/100',
+        'https://picsum.photos/seed/12/100/100',
+    ]
   },
   {
     id: "2",
-    name: "Girl's Trip",
-    date: "June 2",
-    amount: 0,
-    members: 4,
-    status: "UPCOMING",
+    name: "Iye's Burial",
+    amount: 5000,
+    contributed: 2546.00,
+    progress: 52,
+    daysLeft: 15,
+    status: "ACTIVE",
+    memberAvatars: [
+        'https://picsum.photos/seed/13/100/100',
+        'https://picsum.photos/seed/14/100/100',
+        'https://picsum.photos/seed/15/100/100',
+    ]
   },
   {
     id: "3",
-    name: "Beach Hangout",
-    date: "September 19",
-    amount: 12000,
-    members: 15,
-    status: "PAST",
+    name: "Nile's College Tuition",
+    amount: 10000,
+    contributed: 9562.00,
+    progress: 98,
+    daysLeft: 25,
+    status: "ACTIVE",
+    memberAvatars: [
+        'https://picsum.photos/seed/16/100/100',
+        'https://picsum.photos/seed/17/100/100',
+        'https://picsum.photos/seed/18/100/100',
+    ]
+  },
+   {
+    id: "4",
+    name: "Investor Buyback",
+    amount: 23000000,
+    contributed: 2249562.00,
+    progress: 48,
+    daysLeft: 65,
+    status: "ACTIVE",
+    memberAvatars: [
+        'https://picsum.photos/seed/19/100/100',
+        'https://picsum.photos/seed/20/100/100',
+        'https://picsum.photos/seed/21/100/100',
+    ]
   },
 ];
