@@ -11,8 +11,8 @@ import WalletBreakdown from "@/components/dashboard/wallet-breakdown";
 import DashboardTabs from "@/components/dashboard/dashboard-tabs";
 
 const quickActions = [
-    { label: "Transfer", icon: Icons.send },
-    { label: "Fund", icon: Icons.add },
+    { label: "Send to", icon: Icons.send },
+    { label: "Top up", icon: Icons.add },
     { label: "Budget", icon: Icons.target },
     { label: "Withdraw", icon: Icons.history },
 ];
