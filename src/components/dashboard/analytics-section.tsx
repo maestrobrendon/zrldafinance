@@ -16,7 +16,6 @@ import {
   ChartContainer,
 } from "@/components/ui/chart"
 import { Button } from "../ui/button"
-import { Icons } from "../icons"
 
 const chartData = [
   { name: "Data", value: 70000.00, fill: "hsl(var(--chart-1))", locked: true },
@@ -28,7 +27,13 @@ const chartData = [
 
 const totalValue = chartData.reduce((acc, curr) => acc + curr.value, 0)
 
+const viewModes = ["By Size", "By Time", "By Status"];
+const filters = ["All", "Locked", "Unlocked", "Shared", "With Goals"];
+
 export default function AnalyticsSection() {
+    const [activeViewMode, setActiveViewMode] = React.useState("By Size");
+    const [activeFilter, setActiveFilter] = React.useState("All");
+
   return (
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
@@ -44,19 +49,33 @@ export default function AnalyticsSection() {
             <div>
                 <p className="text-sm font-medium">View Mode</p>
                 <div className="flex gap-2 mt-2">
-                    <Button size="sm" className="rounded-full">By Size</Button>
-                    <Button size="sm" variant="ghost" className="rounded-full">By Time</Button>
-                    <Button size="sm" variant="ghost" className="rounded-full">By Status</Button>
+                    {viewModes.map((mode) => (
+                        <Button 
+                            key={mode}
+                            size="sm" 
+                            variant={activeViewMode === mode ? "default" : "ghost"} 
+                            className="rounded-full"
+                            onClick={() => setActiveViewMode(mode)}
+                        >
+                            {mode}
+                        </Button>
+                    ))}
                 </div>
             </div>
              <div>
                 <p className="text-sm font-medium">Filter</p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                    <Button size="sm" className="rounded-full">All</Button>
-                    <Button size="sm" variant="ghost" className="rounded-full">Locked</Button>
-                    <Button size="sm" variant="ghost" className="rounded-full">Unlocked</Button>
-                    <Button size="sm" variant="ghost" className="rounded-full">Shared</Button>
-                    <Button size="sm" variant="ghost" className="rounded-full">With Goals</Button>
+                    {filters.map((filter) => (
+                         <Button 
+                            key={filter}
+                            size="sm" 
+                            variant={activeFilter === filter ? "default" : "ghost"} 
+                            className="rounded-full"
+                            onClick={() => setActiveFilter(filter)}
+                        >
+                            {filter}
+                        </Button>
+                    ))}
                 </div>
             </div>
         </div>
