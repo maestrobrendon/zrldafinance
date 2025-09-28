@@ -43,6 +43,9 @@ export const wallets: Wallet[] = [
   { id: 'w2', name: 'Emergency', balance: 5040.00, goal: 10000, currency: 'USD', color: 'bg-red-500' },
   { id: 'w3', name: 'New Gadgets', balance: 450.00, goal: 1000, currency: 'USD', color: 'bg-purple-500' },
   { id: 'w4', name: 'Investments', balance: 15800.20, currency: 'USD', color: 'bg-green-500' },
+  { id: 'b1', name: 'Monthly Coffee', balance: 150, goal: 250, currency: 'USD', color: 'bg-yellow-500' },
+  { id: 'b2', name: 'Vehicle Fuel', balance: 50, goal: 400, currency: 'USD', color: 'bg-orange-500' },
+  { id: 'b3', name: 'Gym Membership', balance: 50, goal: 50, currency: 'USD', color: 'bg-cyan-500' },
 ];
 
 export const transactions: Transaction[] = [
@@ -67,4 +70,43 @@ export const mainBalance = {
 
 export const categories = [
   'Groceries', 'Restaurants', 'Utilities', 'Rent', 'Mortgage', 'Transportation', 'Entertainment', 'Shopping', 'Travel', 'Income', 'Investments', 'Other'
+];
+
+export const budgets = [
+  { id: 'b1', name: 'Monthly Coffee', amount: 250.00, left: 100.00, progress: 60, status: 'Available' },
+  { id: 'b2', name: 'Vehicle Fuel', amount: 400.00, left: 50.00, progress: 87.5, status: 'Locked 3 months ago' },
+  { id: 'b3', name: 'Gym Membership', amount: 50.00, left: 0.00, progress: 100, status: 'Available' },
+];
+
+export const goals = [
+    { id: 'w1', name: 'Vacation Fund', amount: 3000, saved: 1250.75, progress: 41.69 },
+    { id: 'w2', name: 'Emergency', amount: 10000, saved: 5040.00, progress: 50.4 },
+    { id: 'w3', name: 'New Gadgets', amount: 1000, saved: 450.00, progress: 45 },
+];
+
+export const circles = [
+  {
+    id: "1",
+    name: "Night Out w/the Boys!",
+    date: "April 19",
+    amount: 1500,
+    members: 5,
+    status: "ACTIVE",
+  },
+  {
+    id: "2",
+    name: "Girl's Trip",
+    date: "June 2",
+    amount: 0,
+    members: 4,
+    status: "UPCOMING",
+  },
+  {
+    id: "3",
+    name: "Beach Hangout",
+    date: "September 19",
+    amount: 12000,
+    members: 15,
+    status: "PAST",
+  },
 ];

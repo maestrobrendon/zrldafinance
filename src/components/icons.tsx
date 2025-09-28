@@ -28,6 +28,7 @@ import {
   ScanLine,
   Grid,
   Filter,
+  Lock
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -77,4 +78,5 @@ export const Icons = {
   scan: ScanLine,
   grid: Grid,
   filter: Filter,
+  lock: Lock,
 };

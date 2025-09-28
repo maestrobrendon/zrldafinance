@@ -2,25 +2,13 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, sharedExpenses, transactions, user, wallets } from "@/lib/data";
+import { mainBalance, user } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Progress } from "@/components/ui/progress";
 import { Icons } from "@/components/icons";
-import { formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import WalletBreakdown from "@/components/dashboard/wallet-breakdown";
-
-const iconMap: { [key: string]: React.FC<any> } = {
-  Entertainment: Icons.entertainment,
-  Income: Icons.dollarSign,
-  Groceries: Icons.shoppingCart,
-  Restaurants: Icons.utensils,
-  Utilities: Icons.bolt,
-  Travel: Icons.plane,
-  Shopping: Icons.shoppingBag,
-  Other: Icons.more,
-};
+import DashboardTabs from "@/components/dashboard/dashboard-tabs";
 
 const quickActions = [
     { label: "Transfer", icon: Icons.send },
@@ -85,84 +73,9 @@ export default function DashboardPage() {
         ))}
         </div>
 
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold tracking-tight">My Budgets</h2>
-          <Button variant="link" asChild>
-            <Link href="/wallets">View All</Link>
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="pt-6 space-y-6">
-            {wallets.slice(0, 3).map((wallet) => (
-              <div key={wallet.id}>
-                <div className="flex justify-between mb-1">
-                  <p className="font-medium">{wallet.name}</p>
-                  {wallet.goal && (
-                    <p className="text-sm text-muted-foreground">
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: wallet.currency,
-                      }).format(wallet.balance)} of {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: wallet.currency,
-                      }).format(wallet.goal)}
-                    </p>
-                  )}
-                </div>
-                 {wallet.goal ? (
-                  <Progress
-                    value={(wallet.balance / wallet.goal) * 100}
-                    className="h-2 [&>div]:bg-primary"
-                  />
-                ) : (
-                    <Progress
-                    value={100}
-                    className="h-2 [&>div]:bg-primary"
-                  />
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardTabs />
 
       <WalletBreakdown />
-
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold tracking-tight">Recent Activity</h2>
-          <Button variant="link" asChild>
-            <Link href="/transactions">View All</Link>
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            {transactions.slice(0, 5).map((transaction) => {
-              const Icon = iconMap[transaction.category] || Icons.more;
-              return (
-              <div key={transaction.id} className="flex items-center gap-4">
-                <div className="bg-primary/20 text-primary p-3 rounded-full">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="flex-grow">
-                  <p className="font-medium">{transaction.description}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDistanceToNow(new Date(transaction.date), { addSuffix: true })}
-                  </p>
-                </div>
-                <p className={`font-medium ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
-                  {transaction.type === 'income' ? '+' : '-'}
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                  }).format(transaction.amount)}
-                </p>
-              </div>
-            )})}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
