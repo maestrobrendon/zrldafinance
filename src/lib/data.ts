@@ -21,8 +21,10 @@ export type Transaction = {
   amount: number;
   date: string;
   category: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'contribution' | 'payment';
   status: 'completed' | 'pending' | 'failed';
+  avatarUrl?: string;
+  icon?: React.FC<React.SVGProps<SVGSVGElement>>;
 };
 
 export type WalletActivity = {
@@ -52,6 +54,13 @@ export type Circle = {
   memberAvatars: string[];
 };
 
+export type SavingRule = {
+    id: string;
+    name: string;
+    description: string;
+    icon: 'round-up' | 'recurring-payment';
+};
+
 export type Budget = {
   id: string;
   name: string;
@@ -60,8 +69,10 @@ export type Budget = {
   leftToSpend: number;
   limit: number;
   progress: number;
-  status: 'Available' | string;
+  status: string; // e.g. 'Available', 'Locked 3 months ago'
   warning?: string;
+  savingRules?: SavingRule[];
+  transactions?: Transaction[];
 }
 
 export type Goal = {
@@ -73,6 +84,9 @@ export type Goal = {
   progress: number;
   growth?: number;
   status: 'Live' | 'Finished';
+  savingRules?: SavingRule[];
+  transactions?: Transaction[];
+  locked?: string;
 }
 
 export const user: User = {
@@ -86,6 +100,16 @@ export const wallets: Wallet[] = [
   { id: 'w2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, currency: 'USD', color: 'bg-red-500' },
   { id: 'w3', name: 'Car Purchase', balance: 30500.00, goal: 400500.00, currency: 'USD', color: 'bg-purple-500' },
   { id: 'w4', name: 'Investments', balance: 15800.20, currency: 'USD', color: 'bg-green-500' },
+];
+
+export const detailedTransactions: Transaction[] = [
+    { id: 'dt1', description: 'Diego', amount: 12.50, date: '2025-10-19T05:45:00Z', category: 'Other', type: 'expense', status: 'completed', avatarUrl: 'https://picsum.photos/seed/20/100/100' },
+    { id: 'dt2', description: 'James contributed', amount: 540.00, date: '2025-10-15T21:10:00Z', category: 'Income', type: 'contribution', status: 'completed' },
+    { id: 'dt3', description: 'Payment to Bar & Lounge', amount: 25.00, date: '2025-10-12T14:13:00Z', category: 'Restaurants', type: 'payment', status: 'completed' },
+    { id: 'dt4', description: 'Payment to Club', amount: 10.50, date: '2025-10-07T21:10:00Z', category: 'Entertainment', type: 'payment', status: 'completed' },
+    { id: 'dt5', description: 'Ibrahim contributed', amount: 800.00, date: '2025-10-02T01:19:00Z', category: 'Income', type: 'contribution', status: 'completed', avatarUrl: 'https://picsum.photos/seed/21/100/100' },
+    { id: 'dt6', description: 'Payment to Cafe', amount: 13.00, date: '2024-09-28T21:10:00Z', category: 'Restaurants', type: 'payment', status: 'completed' },
+    { id: 'dt7', description: 'Lilian contributed', amount: 20.00, date: '2024-09-25T20:00:00Z', category: 'Income', type: 'contribution', status: 'completed', avatarUrl: 'https://picsum.photos/seed/22/100/100' },
 ];
 
 export const transactions: Transaction[] = [
@@ -108,7 +132,7 @@ export const sharedExpenses: SharedExpense[] = [
 ];
 
 export const mainBalance = {
-  balance: wallets.reduce((acc, wallet) => acc + wallet.balance, 0),
+  balance: 51440.43,
   currency: 'USD',
 };
 
@@ -117,17 +141,17 @@ export const categories = [
 ];
 
 export const budgets: Budget[] = [
-  { id: 'b1', name: 'Monthly Coffee', amount: 250.00, spent: 328, leftToSpend: 392, limit: 720, progress: 45, status: 'Available', warning: 'Your limit for Food & Drinks is on track' },
-  { id: 'b2', name: 'Vehicle Fuel', amount: 400.00, spent: 328, leftToSpend: 392, limit: 720, progress: 87.5, status: 'Locked 3 months ago', warning: 'Whoops! You almost touch your budget.' },
-  { id: 'b3', name: 'Gym Membership', amount: 50.00, spent: 50, leftToSpend: 0, limit: 50, progress: 100, status: 'Available' },
+  { id: 'b1', name: 'Monthly Coffee', amount: 250.00, spent: 328, leftToSpend: 392, limit: 720, progress: 45, status: 'Available', warning: 'Your limit for Food & Drinks is on track', savingRules: [{id: 'sr1', name: 'Spare change', description: 'Round-Up', icon: 'round-up'}, {id: 'sr2', name: 'Recurring payment', description: '€10.00 / 8th day of the month', icon: 'recurring-payment'}], transactions: detailedTransactions },
+  { id: 'b2', name: 'Vehicle Fuel', amount: 400.00, spent: 328, leftToSpend: 392, limit: 720, progress: 87.5, status: 'Locked 3 months ago', warning: 'Whoops! You almost touch your budget.', savingRules: [{id: 'sr1', name: 'Spare change', description: 'Round-Up', icon: 'round-up'}], transactions: detailedTransactions },
+  { id: 'b3', name: 'Gym Membership', amount: 50.00, spent: 50, leftToSpend: 0, limit: 50, progress: 100, status: 'Available', transactions: detailedTransactions.slice(0, 3) },
 ];
 
 
 export const goals: Goal[] = [
-    { id: 'g1', name: 'Investment', balance: 1640.23, goal: 23468.00, daysLeft: 65, progress: 7, growth: 12, status: 'Live' },
-    { id: 'g2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, daysLeft: 25, progress: 75, status: 'Live' },
-    { id: 'g3', name: 'Car Purchase', balance: 30500, goal: 400500, daysLeft: 35, progress: 15, status: 'Live' },
-    { id: 'g4', name: 'House Downpayment', balance: 50000, goal: 50000, daysLeft: 0, progress: 100, status: 'Finished' },
+    { id: 'g1', name: 'Trip to Utah', balance: 2150, goal: 23468.00, daysLeft: 65, progress: 9, growth: 12, status: 'Live', locked: 'Locked 3 months ago', savingRules: [{id: 'sr1', name: 'Spare change', description: 'Round-Up', icon: 'round-up'}, {id: 'sr2', name: 'Recurring payment', description: '€10.00 / 8th day of the month', icon: 'recurring-payment'}], transactions: detailedTransactions },
+    { id: 'g2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, daysLeft: 25, progress: 75, status: 'Live', transactions: detailedTransactions.slice(2,5) },
+    { id: 'g3', name: 'Car Purchase', balance: 30500, goal: 400500, daysLeft: 35, progress: 15, status: 'Live', transactions: detailedTransactions.slice(1,4) },
+    { id: 'g4', name: 'House Downpayment', balance: 50000, goal: 50000, daysLeft: 0, progress: 100, status: 'Finished', transactions: detailedTransactions.slice(4,7) },
     { id: 'g5', name: 'Vacation', balance: 2500, goal: 2500, daysLeft: 0, progress: 100, status: 'Finished' },
 
 ];
