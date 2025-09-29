@@ -6,7 +6,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Wallet, budgets as initialBudgets, goals as initialGoals } from "@/lib/data";
+import { Wallet, budgets as initialBudgets, goals as initialGoals, wallets as initialWalletsData } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import TopGoals from "@/components/wallets/top-goals";
@@ -15,22 +15,16 @@ import YourGoals from "@/components/wallets/your-goals";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import Link from 'next/link'
 
-const initialWallets: Wallet[] = [
-  { id: 'w1', name: 'Investment', balance: 1640.23, goal: 23468.00, currency: 'USD', color: 'bg-blue-500' },
-  { id: 'w2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, currency: 'USD', color: 'bg-red-500' },
-  { id: 'w3', name: 'Car Purchase', balance: 30500.00, goal: 400500.00, currency: 'USD', color: 'bg-purple-500' },
-  { id: 'w4', name: 'Investments', balance: 15800.20, currency: 'USD', color: 'bg-green-500' },
-];
-
 const quickActions = [
   { label: "Add", icon: Icons['add-2'], isDialog: true },
   { label: "Send", icon: Icons['send-2'], href: '/send' },
+  { label: "Move", icon: Icons.move, href: '/move' },
   { label: "Withdraw", icon: Icons.withdraw, href: '/withdraw' },
 ];
 
 export default function WalletsPage() {
-  const [wallets, setWallets] = useState<Wallet[]>(initialWallets);
-  const totalBalance = initialWallets.reduce((acc, wallet) => acc + wallet.balance, 0);
+  const [wallets, setWallets] = useState<Wallet[]>(initialWalletsData);
+  const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balance, 0);
 
   const handleAddWallet = (wallet: Omit<Wallet, 'id' | 'currency' | 'color'>) => {
     const newWallet: Wallet = {
@@ -62,7 +56,7 @@ export default function WalletsPage() {
               USD
             </p>
           </div>
-          <div className="mt-6 grid grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-4 gap-4">
             {quickActions.map((action) => (
               <div key={action.label} className="flex flex-col items-center gap-2">
                  {action.isDialog ? (
@@ -103,4 +97,3 @@ export default function WalletsPage() {
     </div>
   );
 }
-
