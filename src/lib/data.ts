@@ -1,4 +1,5 @@
 
+
 export type User = {
   name: string;
   email: string;
@@ -131,12 +132,15 @@ export const goals: Goal[] = [
 
 ];
 
-export const topGoals = wallets.filter(wallet => wallet.goal).map(wallet => ({
-  id: wallet.id,
-  name: wallet.name,
-  balance: wallet.balance,
-  goal: wallet.goal || 0,
-  daysLeft: Math.floor(Math.random() * 100), // Placeholder
+const staticDaysLeft = [65, 25, 35];
+export const topGoals = wallets
+  .filter(wallet => wallet.goal)
+  .map((wallet, index) => ({
+    id: wallet.id,
+    name: wallet.name,
+    balance: wallet.balance,
+    goal: wallet.goal || 0,
+    daysLeft: staticDaysLeft[index % staticDaysLeft.length],
 }));
 
 
