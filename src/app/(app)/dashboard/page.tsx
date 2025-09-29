@@ -1,4 +1,7 @@
 
+"use client";
+
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -34,6 +37,7 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
 
 
 export default function DashboardPage() {
+  const [showBanner, setShowBanner] = useState(true);
   const combinedActivity = [...transactions, ...walletActivities]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -91,6 +95,35 @@ export default function DashboardPage() {
             </div>
         ))}
       </div>
+
+      {showBanner && (
+        <div className="bg-blue-600 text-white p-4 rounded-lg flex items-center gap-4 relative">
+          <div className="bg-blue-700 p-2 rounded-lg">
+            <Icons.flame className="h-6 w-6 text-yellow-400" />
+          </div>
+          <div>
+            <p className="text-sm">
+              You are doing <span className="font-bold">great</span> this month with{' '}
+              <span className="font-bold">
+                {new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                }).format(450.97)}
+              </span>{' '}
+              saved.
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-1 right-1 h-7 w-7 text-white/80 hover:text-white hover:bg-white/10"
+            onClick={() => setShowBanner(false)}
+          >
+            <Icons.x className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </Button>
+        </div>
+      )}
       
       <Separator className="my-6" />
 

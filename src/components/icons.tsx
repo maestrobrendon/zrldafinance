@@ -31,6 +31,7 @@ import {
   Lock,
   Flame,
   ArrowUp,
+  X,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -112,4 +113,5 @@ export const Icons = {
   lock: Lock,
   flame: Flame,
   arrowUp: ArrowUp,
+  x: X,
 };
