@@ -6,7 +6,7 @@ import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { add, format } from "date-fns";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,8 @@ import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "../ui/card";
 import { Wallet } from "@/lib/data";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
+import { Separator } from "../ui/separator";
 
 type WalletType = "budget" | "goal";
 
@@ -41,11 +43,15 @@ const budgetWalletSchema = z.object({
   walletName: z.string().min(2, "Name must be at least 2 characters."),
   totalBudget: z.coerce.number().positive("Amount must be positive."),
   frequency: z.enum(["daily", "weekly", "bi-weekly", "monthly"]),
-  disbursementDay: z.string().optional(), // Could be more specific based on frequency
   lock: z.boolean().default(false),
-  lockDuration: z.string().optional(),
+  lockDuration: z.coerce.number().positive().optional(),
   carryOver: z.boolean().default(false),
+  autoDisburse: z.boolean().default(false),
+  disbursementAmount: z.coerce.number().optional(),
+  disbursementFrequency: z.enum(["daily", "weekly", "monthly"]).optional(),
+  disbursementDay: z.string().optional(),
 });
+
 
 const goalWalletSchema = z.object({
   goalName: z.string().min(2, "Name must be at least 2 characters."),
@@ -61,6 +67,10 @@ type CreateWalletDialogProps = {
   onWalletCreated?: (wallet: Omit<Wallet, 'id' | 'currency' | 'color'>) => void;
 };
 
+const weekDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const monthDays = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
+
+
 export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDialogProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<WalletType>("budget");
@@ -72,6 +82,7 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
       frequency: "monthly",
       lock: false,
       carryOver: false,
+      autoDisburse: false,
     },
   });
 
@@ -115,6 +126,8 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
         default: return 0;
     }
   }, [totalBudget, frequency]);
+  
+  const disbursementFrequency = budgetForm.watch("disbursementFrequency");
 
 
   return (
@@ -133,7 +146,7 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                 <Icons.target className="mr-2 h-4 w-4"/> Goal
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="budget" className="px-6 py-4">
+          <TabsContent value="budget" className="px-6 py-4 max-h-[80vh] overflow-y-auto">
             <Form {...budgetForm}>
               <form onSubmit={budgetForm.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -220,54 +233,163 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                                 control={budgetForm.control}
                                 name="lockDuration"
                                 render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Lock Duration</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select duration" />
-                                        </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                        <SelectItem value="10">10 days</SelectItem>
-                                        <SelectItem value="30">30 days</SelectItem>
-                                        <SelectItem value="60">60 days</SelectItem>
-                                        <SelectItem value="custom">Custom</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                  <FormItem>
+                                    <FormLabel>Lock Duration (in days)</FormLabel>
+                                    <FormControl>
+                                      <Input type="number" placeholder="e.g., 30" {...field} />
+                                    </FormControl>
                                     <FormMessage />
-                                    </FormItem>
+                                  </FormItem>
                                 )}
                             />
                         )}
-                         <FormField
-                            control={budgetForm.control}
-                            name="carryOver"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <FormLabel>Carry-over</FormLabel>
-                                    <FormDescription>
-                                        Roll over unspent funds.
-                                    </FormDescription>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                </FormItem>
-                            )}
-                        />
                     </CardContent>
                 </Card>
+
+                 <Collapsible>
+                    <CollapsibleTrigger asChild>
+                        <Button variant="link" className="p-0">
+                            Advanced Settings <Icons.chevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 mt-2">
+                       <Card className="bg-muted/50">
+                            <CardContent className="p-4 space-y-4">
+                                <FormField
+                                    control={budgetForm.control}
+                                    name="carryOver"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Carry-over</FormLabel>
+                                            <FormDescription>
+                                                Roll over unspent funds.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <Separator />
+                                 <FormField
+                                    control={budgetForm.control}
+                                    name="autoDisburse"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Auto-Disbursement</FormLabel>
+                                            <FormDescription>
+                                                Automatically send funds to your main wallet.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                {budgetForm.watch("autoDisburse") && (
+                                    <div className="space-y-4 pl-2 pt-2 border-l-2 ml-2">
+                                        <FormField
+                                            control={budgetForm.control}
+                                            name="disbursementAmount"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Disbursement Amount</FormLabel>
+                                                <FormControl>
+                                                <Input type="number" placeholder="$50" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={budgetForm.control}
+                                            name="disbursementFrequency"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                <FormLabel>Disbursement Frequency</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a frequency" />
+                                                    </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                    <SelectItem value="daily">Daily</SelectItem>
+                                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        {disbursementFrequency === 'weekly' && (
+                                              <FormField
+                                                control={budgetForm.control}
+                                                name="disbursementDay"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                    <FormLabel>Day of the Week</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a day" />
+                                                        </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {weekDays.map(day => <SelectItem key={day} value={day.toLowerCase()}>{day}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        )}
+                                        {disbursementFrequency === 'monthly' && (
+                                             <FormField
+                                                control={budgetForm.control}
+                                                name="disbursementDay"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                    <FormLabel>Day of the Month</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a day" />
+                                                        </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {monthDays.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                            </CardContent>
+                       </Card>
+                    </CollapsibleContent>
+                 </Collapsible>
+
 
                 <Button type="submit" className="w-full">Create Budget Wallet</Button>
               </form>
             </Form>
           </TabsContent>
-          <TabsContent value="goal" className="px-6 py-4">
+          <TabsContent value="goal" className="px-6 py-4 max-h-[80vh] overflow-y-auto">
             <Form {...goalForm}>
               <form onSubmit={goalForm.handleSubmit(onSubmit)} className="space-y-4">
                  <FormField
@@ -378,3 +500,5 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
     </Dialog>
   );
 }
+
+    
