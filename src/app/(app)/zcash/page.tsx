@@ -43,7 +43,7 @@ export default function ZCashPage() {
       
       <div className="grid grid-cols-2 gap-4">
         <Button size="lg" className="h-14" asChild>
-            <Link href="/send">
+            <Link href="/send?source=zcash">
                 <Icons.send className="mr-2 h-5 w-5" />
                 Send
             </Link>

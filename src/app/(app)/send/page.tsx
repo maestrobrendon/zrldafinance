@@ -2,6 +2,7 @@
 "use client"
 
 import { useState } from "react";
+import { useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import { user } from "@/lib/data";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const zrldaFriends = [
     { id: 'f1', name: 'Jane Doe', avatarUrl: 'https://picsum.photos/seed/2/100/100' },
@@ -27,49 +29,55 @@ const activeCircles = [
 
 export default function SendPage() {
     const [step, setStep] = useState('form'); // form, review, success
-    const [activeTab, setActiveTab] = useState('bank');
+    const searchParams = useSearchParams()
+    const source = searchParams.get('source');
+    const isZcashFlow = source === 'zcash';
+
+    const [activeTab, setActiveTab] = useState(isZcashFlow ? 'zrlda' : 'bank');
 
     const renderForm = () => (
-        <Tabs defaultValue="bank" className="w-full" onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="bank">Bank</TabsTrigger>
+        <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
+            <TabsList className={cn("grid w-full", isZcashFlow ? "grid-cols-2" : "grid-cols-3")}>
+                {!isZcashFlow && <TabsTrigger value="bank">Bank</TabsTrigger>}
                 <TabsTrigger value="zrlda">Zrlda User</TabsTrigger>
                 <TabsTrigger value="circle">Circle</TabsTrigger>
             </TabsList>
-            <TabsContent value="bank">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Send to Bank Account</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="bank">Bank</Label>
-                             <Select>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a bank" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="gtb">Guaranty Trust Bank</SelectItem>
-                                    <SelectItem value="zenith">Zenith Bank</SelectItem>
-                                    <SelectItem value="firstbank">First Bank</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="account-number">Account Number</Label>
-                            <Input id="account-number" placeholder="Enter account number" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="amount">Amount</Label>
-                            <Input id="amount" type="number" placeholder="₦0.00" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="note">Note (Optional)</Label>
-                            <Input id="note" placeholder="What's this for?" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
+            {!isZcashFlow && (
+                <TabsContent value="bank">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Send to Bank Account</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="bank">Bank</Label>
+                                <Select>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a bank" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="gtb">Guaranty Trust Bank</SelectItem>
+                                        <SelectItem value="zenith">Zenith Bank</SelectItem>
+                                        <SelectItem value="firstbank">First Bank</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="account-number">Account Number</Label>
+                                <Input id="account-number" placeholder="Enter account number" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">Amount</Label>
+                                <Input id="amount" type="number" placeholder="₦0.00" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="note">Note (Optional)</Label>
+                                <Input id="note" placeholder="What's this for?" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            )}
             <TabsContent value="zrlda">
                  <Card>
                     <CardHeader>
