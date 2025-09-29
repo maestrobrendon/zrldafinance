@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -7,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", icon: Icons.dashboard, label: "Home" },
+  { href: "/zcash", icon: Icons.wallet, label: "ZCash" },
   { href: "/wallets", icon: Icons.wallet, label: "Wallets" },
   { href: "/circles", icon: Icons.users, label: "Circles" },
   { href: "/transactions", icon: Icons.transactions, label: "History" },
@@ -17,7 +19,7 @@ export default function BottomNavbar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-16 border-t bg-background/95 backdrop-blur-sm md:hidden z-50">
-      <nav className="flex h-full items-center justify-around">
+      <nav className="grid grid-cols-5 h-full items-center justify-around">
         {navItems.map((item) => (
           <Link
             key={item.href}

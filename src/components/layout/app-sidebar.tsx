@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -18,6 +19,7 @@ import { user } from "@/lib/data";
 
 const navItems = [
   { href: "/dashboard", icon: Icons.dashboard, label: "Dashboard" },
+  { href: "/zcash", icon: Icons.wallet, label: "ZCash" },
   { href: "/wallets", icon: Icons.wallet, label: "Wallets" },
   { href: "/circles", icon: Icons.users, label: "Circles" },
   { href: "/transactions", icon: Icons.transactions, label: "History" },
