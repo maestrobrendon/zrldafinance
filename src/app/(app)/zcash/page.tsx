@@ -11,6 +11,14 @@ import { zcashBalance, transactions } from "@/lib/data";
 import Link from "next/link";
 import { format } from "date-fns";
 
+const favoritePeople = [
+    { id: 'fav1', name: 'Grace L.', avatarUrl: 'https://picsum.photos/seed/grace/100/100', flag: '🇬🇭' },
+    { id: 'fav2', name: 'Lawrence A.', fallback: 'LA', flag: '🇬🇭' },
+    { id: 'fav3', name: 'Tunde O.', avatarUrl: 'https://picsum.photos/seed/tunde/100/100', flag: '🇳🇬' },
+    { id: 'fav4', name: 'Maria S.', avatarUrl: 'https://picsum.photos/seed/maria/100/100', flag: '🇪🇸' },
+    { id: 'fav5', name: 'Ken J.', fallback: 'KJ', flag: '🇯🇵' },
+]
+
 export default function ZCashPage() {
   const [showRequest, setShowRequest] = useState(true);
   const recentTransactions = transactions
@@ -79,6 +87,30 @@ export default function ZCashPage() {
           </CardContent>
         </Card>
       )}
+
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold tracking-tight">Your favorite people</h2>
+        <div className="flex gap-4 overflow-x-auto pb-2">
+            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                <Button variant="outline" size="icon" className="w-16 h-16 rounded-full bg-card hover:bg-primary/10">
+                    <Icons.add className="h-6 w-6 text-primary" />
+                </Button>
+                <span className="text-sm font-medium">Add</span>
+            </div>
+            {favoritePeople.map((person) => (
+                <div key={person.id} className="flex flex-col items-center gap-2 flex-shrink-0 w-20">
+                    <div className="relative">
+                        <Avatar className="w-16 h-16">
+                            {person.avatarUrl && <AvatarImage src={person.avatarUrl} alt={person.name} />}
+                            <AvatarFallback>{person.fallback || person.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        </Avatar>
+                        <span className="absolute bottom-0 right-0 text-xl border-2 border-background rounded-full">{person.flag}</span>
+                    </div>
+                    <span className="text-sm font-medium text-center truncate w-full">{person.name}</span>
+                </div>
+            ))}
+        </div>
+      </div>
       
       <div className="grid grid-cols-2 gap-4">
         <Button size="lg" className="h-14" asChild>
