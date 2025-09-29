@@ -34,7 +34,11 @@ import {
   X,
   Calendar,
   Image,
-  Info
+  Info,
+  Copy,
+  Share,
+  QrCode,
+  ChevronRight
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -76,7 +80,25 @@ export const Icons = {
   settings: Settings,
   more: MoreHorizontal,
   add: PlusCircle,
-  send: (props: React.SVGProps<SVGSVGElement>) => (
+  'add-2': (props: React.SVGProps<SVGSVGElement>) => (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      stroke-width="2" 
+      stroke-linecap="round" 
+      stroke-linejoin="round" 
+      {...props}
+    >
+      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 13.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
+      <path d="M12 7.5V12h2.25" />
+    </svg>
+  ),
+  send: ArrowUpRight,
+  'send-2': (props: React.SVGProps<SVGSVGElement>) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
@@ -92,10 +114,28 @@ export const Icons = {
     </svg>
   ),
   receive: ArrowDownLeft,
+  withdraw: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      stroke-width="2" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+      {...props}
+    >
+      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 13.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
+      <path d="M12 7.5V12h2.25" />
+    </svg>
+  ),
   search: Search,
   notification: Bell,
   chevronDown: ChevronDown,
   chevronLeft: ChevronLeft,
+  chevronRight: ChevronRight,
   creditCard: CreditCard,
   dollarSign: DollarSign,
   logout: LogOut,
@@ -119,5 +159,8 @@ export const Icons = {
   x: X,
   calendar: Calendar,
   image: Image,
-  info: Info
+  info: Info,
+  copy: Copy,
+  share: Share,
+  qrCode: QrCode
 };

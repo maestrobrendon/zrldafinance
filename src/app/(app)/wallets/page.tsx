@@ -13,6 +13,7 @@ import TopGoals from "@/components/wallets/top-goals";
 import YourBudget from "@/components/wallets/your-budget";
 import YourGoals from "@/components/wallets/your-goals";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
+import Link from 'next/link'
 
 const initialWallets: Wallet[] = [
   { id: 'w1', name: 'Investment', balance: 1640.23, goal: 23468.00, currency: 'USD', color: 'bg-blue-500' },
@@ -22,9 +23,9 @@ const initialWallets: Wallet[] = [
 ];
 
 const quickActions = [
-  { label: "Add", icon: Icons.add, isDialog: true },
-  { label: "Transfer", icon: Icons.transfer },
-  { label: "Move", icon: Icons.move },
+  { label: "Add", icon: Icons['add-2'], isDialog: true },
+  { label: "Send", icon: Icons['send-2'], href: '/send' },
+  { label: "Withdraw", icon: Icons.withdraw, href: '/withdraw' },
 ];
 
 export default function WalletsPage() {
@@ -78,13 +79,15 @@ export default function WalletsPage() {
                       }
                    />
                  ) : (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="w-16 h-16 rounded-full bg-background/50 border-primary/50 hover:bg-primary/10"
-                  >
-                    <action.icon className="h-6 w-6 text-primary" />
-                  </Button>
+                   <Link href={action.href || '#'}>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-16 h-16 rounded-full bg-background/50 border-primary/50 hover:bg-primary/10"
+                    >
+                      <action.icon className="h-6 w-6 text-primary" />
+                    </Button>
+                  </Link>
                  )}
                 <span className="text-sm font-medium">{action.label}</span>
               </div>

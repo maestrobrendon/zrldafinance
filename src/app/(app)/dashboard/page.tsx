@@ -18,10 +18,10 @@ import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 
 const quickActions = [
-    { label: "Send to", icon: Icons.send },
-    { label: "Top up", icon: Icons.add },
+    { label: "Send To", icon: Icons['send-2'], href: "/send" },
+    { label: "Top Up", icon: Icons['add-2'], href: "/top-up" },
     { label: "Budget", icon: Icons.target, isDialog: true },
-    { label: "Withdraw", icon: Icons.history },
+    { label: "Withdraw", icon: Icons.withdraw, href: "/withdraw" },
 ];
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
@@ -98,13 +98,15 @@ export default function DashboardPage() {
                 }
               />
             ) : (
-               <Button
-                  variant="outline"
-                  size="icon"
-                  className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
-              >
-                  <action.icon className="h-6 w-6 text-primary" />
-              </Button>
+                <Link href={action.href || '#'}>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
+                    >
+                        <action.icon className="h-6 w-6 text-primary" />
+                    </Button>
+                </Link>
             )}
             <span className="text-sm font-medium">{action.label}</span>
             </div>
