@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,9 +12,18 @@ import Link from "next/link";
 import { format } from "date-fns";
 
 export default function ZCashPage() {
+  const [showRequest, setShowRequest] = useState(true);
   const recentTransactions = transactions
     .filter(t => t.type !== 'income')
     .slice(0, 5);
+
+  const moneyRequest = {
+    name: 'Liz Dizon',
+    amount: 37.24,
+    reason: 'Sunday Brunch',
+    expires: 'Tomorrow',
+    avatarUrl: 'https://picsum.photos/seed/liz/100/100'
+  };
 
   return (
     <div className="space-y-8">
@@ -40,6 +50,35 @@ export default function ZCashPage() {
              <p className="text-xs text-white/50 mt-1">From your Main Wallet</p>
         </CardContent>
       </Card>
+
+      {showRequest && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={moneyRequest.avatarUrl} alt={moneyRequest.name} data-ai-hint="avatar" />
+                  <AvatarFallback>{moneyRequest.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-bold text-lg">{moneyRequest.name}</p>
+                  <p className="font-semibold text-lg">Requested {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(moneyRequest.amount)}</p>
+                  <p className="text-sm text-muted-foreground">{moneyRequest.reason}</p>
+                  <p className="text-sm text-muted-foreground">Expires {moneyRequest.expires}</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowRequest(false)}>
+                <Icons.x className="h-4 w-4" />
+              </Button>
+            </div>
+            <Separator className="my-4" />
+            <Link href="/send?source=zcash" className="flex justify-between items-center w-full text-primary">
+              <span className="font-semibold">Send Money</span>
+              <Icons.chevronRight className="h-5 w-5" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
       
       <div className="grid grid-cols-2 gap-4">
         <Button size="lg" className="h-14" asChild>
