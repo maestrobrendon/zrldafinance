@@ -64,8 +64,7 @@ const groupTransactionsByMonth = (transactions: Transaction[]) => {
   }, {} as Record<string, Transaction[]>);
 };
 
-export default function WalletDetailPage({ params }: { params: { walletId: string } }) {
-  const { walletId } = params;
+export default function WalletDetailPage({ params: { walletId } }: { params: { walletId: string } }) {
   
   const allItems = [...wallets, ...budgets, ...goals];
   const item = allItems.find(w => w.id === walletId);
