@@ -2,6 +2,7 @@
 "use client"
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ const zrldaFriends = [
 ]
 
 export default function RequestPage() {
+    const router = useRouter();
     const [step, setStep] = useState('form'); // form, review, success
     const [selectedFriend, setSelectedFriend] = useState<(typeof zrldaFriends)[0] | null>(null);
     const [amount, setAmount] = useState('');
@@ -166,8 +168,8 @@ export default function RequestPage() {
     return (
         <div className="space-y-8">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" asChild>
-                    <Link href="/zcash"><Icons.arrowLeft className="h-5 w-5" /></Link>
+                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={() => router.back()}>
+                    <Icons.arrowLeft className="h-5 w-5" />
                 </Button>
                 <div className="text-center flex-1">
                     <h1 className="text-xl font-bold tracking-tight">Request Money</h1>
