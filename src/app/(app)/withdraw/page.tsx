@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
+import Link from "next/link";
 
 const linkedBanks = [
     { id: 'b1', name: 'Guaranty Trust Bank', account: '0123456789' },
@@ -120,14 +121,20 @@ export default function WithdrawPage() {
 
     return (
         <div className="space-y-8">
-            <div className="text-center">
-                <h1 className="text-3xl font-bold tracking-tight">Withdraw</h1>
-                 <p className="text-muted-foreground">
-                    Your current balance: {' '}
-                    <span className="font-bold text-primary">
-                        {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(51440.43)}
-                    </span>
-                </p>
+            <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" asChild>
+                    <Link href="/dashboard"><Icons.arrowLeft className="h-5 w-5" /></Link>
+                </Button>
+                <div className="text-center flex-1">
+                    <h1 className="text-xl font-bold tracking-tight">Withdraw</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Your current balance: {' '}
+                        <span className="font-bold text-primary">
+                            {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(51440.43)}
+                        </span>
+                    </p>
+                </div>
+                <div className="w-9"></div>
             </div>
 
             {step === 'form' && renderForm()}

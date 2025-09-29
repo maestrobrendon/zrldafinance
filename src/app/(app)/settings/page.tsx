@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,15 +11,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { user } from "@/lib/data";
+import { Icons } from "@/components/icons";
+import Link from "next/link";
 
 export default function SettingsPage() {
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account and security settings.
-        </p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" asChild>
+            <Link href="/dashboard"><Icons.arrowLeft className="h-5 w-5" /></Link>
+        </Button>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your account and security settings.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

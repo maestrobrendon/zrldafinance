@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Icons } from "@/components/icons";
+import Link from "next/link";
 
 const circles = [
   {
@@ -49,8 +50,11 @@ const recentActivity = {
 export default function CirclesPage() {
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Groups/Circles</h1>
+       <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" asChild>
+            <Link href="/dashboard"><Icons.arrowLeft className="h-5 w-5" /></Link>
+        </Button>
+        <h1 className="text-xl font-bold tracking-tight">Groups/Circles</h1>
       </div>
 
       <Tabs defaultValue="all">
