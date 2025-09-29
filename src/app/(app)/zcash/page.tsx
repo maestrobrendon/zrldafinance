@@ -88,6 +88,23 @@ export default function ZCashPage() {
             </CardContent>
         </Card>
       </div>
+
+       <div>
+        <h2 className="text-2xl font-bold tracking-tight mb-4">Special Offers</h2>
+        <Card>
+            <CardContent className="p-6 text-center">
+                <div className="flex justify-center mb-6">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-purple-400 via-pink-500 to-yellow-500">
+                        <Icons.logo className="h-8 w-8 text-white" />
+                    </div>
+                </div>
+                <h3 className="text-xl font-bold tracking-tight">Get Up to $200 Daily Cash for Your Family</h3>
+                <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
+                    Add a new Co-Owner and they can get $100, add new Participants and each can get $25. Spend requirements apply. Ends June 17.
+                </p>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
