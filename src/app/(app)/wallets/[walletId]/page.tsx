@@ -64,7 +64,8 @@ const groupTransactionsByMonth = (transactions: Transaction[]) => {
   }, {} as Record<string, Transaction[]>);
 };
 
-export default function WalletDetailPage({ params: { walletId } }: { params: { walletId: string } }) {
+export default function WalletDetailPage({ params }: { params: { walletId: string } }) {
+  const { walletId } = params;
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
