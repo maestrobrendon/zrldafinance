@@ -86,7 +86,8 @@ export type Goal = {
   status: 'Live' | 'Finished';
   savingRules?: SavingRule[];
   transactions?: Transaction[];
-  locked?: string;
+  locked?: boolean;
+  deadline?: string;
 }
 
 export const user: User = {
@@ -148,9 +149,9 @@ export const budgets: Budget[] = [
 
 
 export const goals: Goal[] = [
-    { id: 'g1', name: 'Trip to Utah', balance: 2150, goal: 23468.00, daysLeft: 65, progress: 9, growth: 12, status: 'Live', locked: 'Locked 3 months ago', savingRules: [{id: 'sr1', name: 'Spare change', description: 'Round-Up', icon: 'round-up'}, {id: 'sr2', name: 'Recurring payment', description: '€10.00 / 8th day of the month', icon: 'recurring-payment'}], transactions: detailedTransactions },
-    { id: 'g2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, daysLeft: 25, progress: 75, status: 'Live', transactions: detailedTransactions.slice(2,5) },
-    { id: 'g3', name: 'Car Purchase', balance: 30500, goal: 400500, daysLeft: 35, progress: 15, status: 'Live', transactions: detailedTransactions.slice(1,4) },
+    { id: 'g1', name: 'Trip to Utah', balance: 2150, goal: 23468.00, daysLeft: 65, progress: 9, growth: 12, status: 'Live', locked: true, deadline: '2025-12-25T00:00:00Z', savingRules: [{id: 'sr1', name: 'Spare change', description: 'Round-Up', icon: 'round-up'}, {id: 'sr2', name: 'Recurring payment', description: '€10.00 / 8th day of the month', icon: 'recurring-payment'}], transactions: detailedTransactions },
+    { id: 'g2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, daysLeft: 25, progress: 75, status: 'Live', locked: true, transactions: detailedTransactions.slice(2,5) },
+    { id: 'g3', name: 'Car Purchase', balance: 30500, goal: 400500, daysLeft: 35, progress: 15, status: 'Live', locked: true, deadline: '2026-06-01T00:00:00Z', transactions: detailedTransactions.slice(1,4) },
     { id: 'g4', name: 'House Downpayment', balance: 50000, goal: 50000, daysLeft: 0, progress: 100, status: 'Finished', transactions: detailedTransactions.slice(4,7) },
     { id: 'g5', name: 'Vacation', balance: 2500, goal: 2500, daysLeft: 0, progress: 100, status: 'Finished' },
 

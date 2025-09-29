@@ -5,6 +5,8 @@ import * as React from "react";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { wallets, budgets, goals, Transaction, mainBalance } from "@/lib/data";
 import {
@@ -87,6 +89,8 @@ export default function WalletDetailPage({ params }: { params: { walletId: strin
   const isWallet = 'balance' in item && !('spent' in item) && !('goal' in item);
   const isBudget = 'spent' in item;
   const isGoal = 'goal' in item && 'balance' in item;
+  const typedItem = item as any;
+
 
   const itemTransactions = (item as any).transactions || [];
   const groupedTransactions = groupTransactionsByMonth(itemTransactions);
@@ -102,11 +106,11 @@ export default function WalletDetailPage({ params }: { params: { walletId: strin
                 <h1 className="text-xl font-bold tracking-tight">{item.name}</h1>
             </div>
             
-            {isGoal && (item as any).locked && (
+            {isGoal && typedItem.locked && (
                 <div className="text-center">
                     <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 border-none">
                         <Icons.lock className="mr-1 h-3 w-3" />
-                        {(item as any).locked}
+                         {typedItem.deadline ? `Locked until ${format(new Date(typedItem.deadline), 'MMM d, yyyy')}` : 'Locked until target is met'}
                     </Badge>
                 </div>
             )}
@@ -207,7 +211,7 @@ export default function WalletDetailPage({ params }: { params: { walletId: strin
       )}
 
 
-        {(item as any).savingRules && (item as any).savingRules.length > 0 && (
+        {isBudget && (item as any).savingRules && (item as any).savingRules.length > 0 && (
              <div className="px-4 space-y-3">
                 <h2 className="text-lg font-bold tracking-tight">Saving rules</h2>
                 <Card>
@@ -229,6 +233,30 @@ export default function WalletDetailPage({ params }: { params: { walletId: strin
                              </div>
                            )
                        })}
+                    </CardContent>
+                </Card>
+            </div>
+        )}
+
+        {isGoal && (
+             <div className="px-4 space-y-3">
+                <h2 className="text-lg font-bold tracking-tight">Details</h2>
+                <Card>
+                    <CardContent className="p-4 space-y-4">
+                       <div className="flex justify-between">
+                            <span className="text-muted-foreground">Target Amount</span>
+                            <span className="font-medium">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(typedItem.goal)}</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Deadline</span>
+                            <span className="font-medium">{typedItem.deadline ? format(new Date(typedItem.deadline), 'MMM d, yyyy') : 'Not set'}</span>
+                        </div>
+                         <Separator />
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Days Left</span>
+                            <span className="font-medium">{typedItem.daysLeft}</span>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
