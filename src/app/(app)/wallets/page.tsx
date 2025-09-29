@@ -6,7 +6,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, Wallet, budgets as initialBudgets, goals as initialGoals } from "@/lib/data";
+import { mainBalance, Wallet, budgets as initialBudgets, goals as initialGoals, wallets as initialWallets } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import {
@@ -31,11 +31,13 @@ const quickActions = [
 ];
 
 export default function WalletsPage() {
-  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>(initialWallets);
   const [open, setOpen] = useState(false);
   const [newWalletName, setNewWalletName] = useState("");
   const [newWalletBalance, setNewWalletBalance] = useState("");
   const [newWalletGoal, setNewWalletGoal] = useState("");
+
+  const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balance, 0);
 
   const handleAddWallet = () => {
     if (!newWalletName || !newWalletBalance) {
@@ -72,10 +74,10 @@ export default function WalletsPage() {
               {new Intl.NumberFormat("en-US", {
                 style: "currency",
                 currency: "USD",
-              }).format(mainBalance.balance)}
+              }).format(totalBalance)}
             </p>
             <p className="text-lg font-semibold text-muted-foreground">
-              {mainBalance.currency}
+              USD
             </p>
           </div>
           <div className="mt-6 grid grid-cols-3 gap-4">
