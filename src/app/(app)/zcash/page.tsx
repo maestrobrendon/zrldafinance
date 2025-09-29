@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
-import { mainBalance, transactions } from "@/lib/data";
+import { zcashBalance, transactions } from "@/lib/data";
 import Link from "next/link";
 import { format } from "date-fns";
 
@@ -33,8 +33,8 @@ export default function ZCashPage() {
                 <p className="text-5xl font-bold tracking-tighter">
                     {new Intl.NumberFormat("en-US", {
                     style: "currency",
-                    currency: mainBalance.currency,
-                    }).format(mainBalance.balance)}
+                    currency: zcashBalance.currency,
+                    }).format(zcashBalance.balance)}
                 </p>
             </div>
              <p className="text-xs text-white/50 mt-1">From your Main Wallet</p>
