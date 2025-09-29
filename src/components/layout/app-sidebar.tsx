@@ -18,7 +18,7 @@ import { AppLogo } from "@/components/app-logo";
 import { user } from "@/lib/data";
 
 const navItems = [
-  { href: "/dashboard", icon: Icons.dashboard, label: "Dashboard" },
+  { href: "/dashboard", icon: Icons.home, label: "Dashboard" },
   { href: "/zcash", icon: Icons.wallet, label: "ZCash" },
   { href: "/wallets", icon: Icons.wallet, label: "Wallets" },
   { href: "/circles", icon: Icons.users, label: "Circles" },
