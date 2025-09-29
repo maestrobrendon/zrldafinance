@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
-import { user } from "@/lib/data";
+import { user, mainBalance, zcashBalance } from "@/lib/data";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +34,8 @@ export default function SendPage() {
     const isZcashFlow = source === 'zcash';
 
     const [activeTab, setActiveTab] = useState(isZcashFlow ? 'zrlda' : 'bank');
+    
+    const balanceToShow = isZcashFlow ? zcashBalance.balance : mainBalance.balance;
 
     const renderForm = () => (
         <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
@@ -242,7 +244,7 @@ export default function SendPage() {
                     <p className="text-sm text-muted-foreground">
                         Your current balance: {' '}
                         <span className="font-bold text-primary">
-                            {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(51440.43)}
+                            {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(balanceToShow)}
                         </span>
                     </p>
                 </div>
@@ -255,3 +257,5 @@ export default function SendPage() {
         </div>
     );
 }
+
+    
