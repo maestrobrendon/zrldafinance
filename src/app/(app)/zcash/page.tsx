@@ -59,6 +59,19 @@ export default function ZCashPage() {
         </CardContent>
       </Card>
 
+      <div className="grid grid-cols-2 gap-4">
+        <Button size="lg" className="h-14" asChild>
+            <Link href="/send?source=zcash">
+                <Icons.send className="mr-2 h-5 w-5" />
+                Send
+            </Link>
+        </Button>
+         <Button size="lg" variant="secondary" className="h-14">
+            <Icons.receive className="mr-2 h-5 w-5" />
+            Request
+        </Button>
+      </div>
+
       {showRequest && (
         <Card>
           <CardContent className="p-4">
@@ -110,19 +123,6 @@ export default function ZCashPage() {
                 </div>
             ))}
         </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <Button size="lg" className="h-14" asChild>
-            <Link href="/send?source=zcash">
-                <Icons.send className="mr-2 h-5 w-5" />
-                Send
-            </Link>
-        </Button>
-         <Button size="lg" variant="secondary" className="h-14">
-            <Icons.receive className="mr-2 h-5 w-5" />
-            Request
-        </Button>
       </div>
       
       <div>
