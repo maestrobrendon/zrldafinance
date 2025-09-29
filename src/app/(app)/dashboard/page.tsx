@@ -90,7 +90,9 @@ export default function DashboardPage() {
             <span className="text-sm font-medium">{action.label}</span>
             </div>
         ))}
-        </div>
+      </div>
+      
+      <Separator className="my-6" />
 
       <DashboardTabs />
 

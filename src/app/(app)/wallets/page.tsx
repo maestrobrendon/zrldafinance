@@ -6,12 +6,9 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, transactions, wallets as initialWallets, Wallet } from "@/lib/data";
+import { mainBalance, Wallet, budgets as initialBudgets, goals as initialGoals } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { Icons } from "@/components/icons";
-import { format } from "date-fns";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -23,15 +20,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import TopGoals from "@/components/wallets/top-goals";
+import YourBudget from "@/components/wallets/your-budget";
+import YourGoals from "@/components/wallets/your-goals";
 
 const quickActions = [
   { label: "Add", icon: Icons.add, isDialog: true },
-  { label: "Transfer", icon: Icons.send },
+  { label: "Transfer", icon: Icons.transfer },
   { label: "Move", icon: Icons.move },
 ];
 
 export default function WalletsPage() {
-  const [wallets, setWallets] = useState(initialWallets);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [open, setOpen] = useState(false);
   const [newWalletName, setNewWalletName] = useState("");
   const [newWalletBalance, setNewWalletBalance] = useState("");
@@ -61,7 +61,7 @@ export default function WalletsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Wallet</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-center">My Wallet</h1>
       </div>
 
       <Card className="bg-card/50">
@@ -70,8 +70,8 @@ export default function WalletsPage() {
           <div className="flex items-baseline justify-center gap-2">
             <p className="text-4xl font-bold tracking-tighter">
               {new Intl.NumberFormat("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
+                style: "currency",
+                currency: "USD",
               }).format(mainBalance.balance)}
             </p>
             <p className="text-lg font-semibold text-muted-foreground">
@@ -159,74 +159,11 @@ export default function WalletsPage() {
           </div>
         </CardContent>
       </Card>
+      
+      <TopGoals />
+      <YourBudget />
+      <YourGoals />
 
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold tracking-tight">Your Wallets</h2>
-          <Button variant="link" asChild>
-            <Link href="/wallets">View All</Link>
-          </Button>
-        </div>
-        <div className="space-y-4">
-          {wallets.map((wallet) => (
-            <Card key={wallet.id} className="bg-card/50">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-primary/20 text-primary p-3 rounded-lg">
-                      <Icons.wallet className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase text-muted-foreground">{wallet.name}</p>
-                      <div className="flex items-baseline gap-2">
-                        <p className="text-2xl font-bold">
-                          {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: wallet.currency,
-                            minimumFractionDigits: 2,
-                          }).format(wallet.balance)}
-                        </p>
-                         <p className="text-sm font-semibold text-muted-foreground">{wallet.currency}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <Icons.chevronDown className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-       <div>
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold tracking-tight">Transaction History</h2>
-        </div>
-        <Card className="bg-card/50">
-          <CardContent className="pt-6 space-y-4">
-            {transactions.slice(0, 5).map((transaction, index) => (
-              <div key={transaction.id}>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="font-medium">{transaction.description}</p>
-                        <p className="text-sm text-muted-foreground">
-                            {format(new Date(transaction.date), 'PPp')}
-                        </p>
-                    </div>
-                    <p className={`font-medium ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
-                    {transaction.type === 'income' ? '+' : '-'}
-                    {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                    }).format(transaction.amount)}
-                    </p>
-                </div>
-                {index < transactions.slice(0, 5).length - 1 && <Separator className="mt-4 bg-border/50" />}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

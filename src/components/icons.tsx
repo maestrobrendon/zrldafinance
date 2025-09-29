@@ -28,7 +28,9 @@ import {
   ScanLine,
   Grid,
   Filter,
-  Lock
+  Lock,
+  Flame,
+  ArrowUp,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -46,6 +48,21 @@ export const Icons = {
       {...props}
     >
       <path d="M4 4h16v4L4 20v-4h16" />
+    </svg>
+  ),
+  transfer: (props: React.SVGProps<SVGSVGElement>) => (
+     <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M22 2 11 13" />
+      <path d="m22 2-7 20-4-9-9-4 20-7z" />
     </svg>
   ),
   dashboard: LayoutDashboard,
@@ -93,4 +110,6 @@ export const Icons = {
   grid: Grid,
   filter: Filter,
   lock: Lock,
+  flame: Flame,
+  arrowUp: ArrowUp,
 };

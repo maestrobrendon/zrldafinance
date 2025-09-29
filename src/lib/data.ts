@@ -51,6 +51,29 @@ export type Circle = {
   memberAvatars: string[];
 };
 
+export type Budget = {
+  id: string;
+  name: string;
+  amount: number;
+  spent: number;
+  leftToSpend: number;
+  limit: number;
+  progress: number;
+  status: 'Available' | string;
+  warning?: string;
+}
+
+export type Goal = {
+  id: string;
+  name: string;
+  balance: number;
+  goal: number;
+  daysLeft: number;
+  progress: number;
+  growth?: number;
+  status: 'Live' | 'Finished';
+}
+
 export const user: User = {
   name: 'Alex Doe',
   email: 'alex.doe@example.com',
@@ -58,13 +81,10 @@ export const user: User = {
 };
 
 export const wallets: Wallet[] = [
-  { id: 'w1', name: 'Vacation Fund', balance: 1250.75, goal: 3000, currency: 'USD', color: 'bg-blue-500' },
-  { id: 'w2', name: 'Emergency', balance: 5040.00, goal: 10000, currency: 'USD', color: 'bg-red-500' },
-  { id: 'w3', name: 'New Gadgets', balance: 450.00, goal: 1000, currency: 'USD', color: 'bg-purple-500' },
+  { id: 'w1', name: 'Investment', balance: 1640.23, goal: 23468.00, currency: 'USD', color: 'bg-blue-500' },
+  { id: 'w2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, currency: 'USD', color: 'bg-red-500' },
+  { id: 'w3', name: 'Car Purchase', balance: 30500.00, goal: 400500.00, currency: 'USD', color: 'bg-purple-500' },
   { id: 'w4', name: 'Investments', balance: 15800.20, currency: 'USD', color: 'bg-green-500' },
-  { id: 'b1', name: 'Monthly Coffee', balance: 150, goal: 250, currency: 'USD', color: 'bg-yellow-500' },
-  { id: 'b2', name: 'Vehicle Fuel', balance: 50, goal: 400, currency: 'USD', color: 'bg-orange-500' },
-  { id: 'b3', name: 'Gym Membership', balance: 50, goal: 50, currency: 'USD', color: 'bg-cyan-500' },
 ];
 
 export const transactions: Transaction[] = [
@@ -87,7 +107,7 @@ export const sharedExpenses: SharedExpense[] = [
 ];
 
 export const mainBalance = {
-  balance: 22315.55,
+  balance: 8987.64,
   currency: 'USD',
 };
 
@@ -95,17 +115,30 @@ export const categories = [
   'Groceries', 'Restaurants', 'Utilities', 'Rent', 'Mortgage', 'Transportation', 'Entertainment', 'Shopping', 'Travel', 'Income', 'Investments', 'Other'
 ];
 
-export const budgets = [
-  { id: 'b1', name: 'Monthly Coffee', amount: 250.00, left: 100.00, progress: 60, status: 'Available' },
-  { id: 'b2', name: 'Vehicle Fuel', amount: 400.00, left: 50.00, progress: 87.5, status: 'Locked 3 months ago' },
-  { id: 'b3', name: 'Gym Membership', amount: 50.00, left: 0.00, progress: 100, status: 'Available' },
+export const budgets: Budget[] = [
+  { id: 'b1', name: 'Monthly Coffee', amount: 250.00, spent: 328, leftToSpend: 392, limit: 720, progress: 45, status: 'Available', warning: 'Your limit for Food & Drinks is on track' },
+  { id: 'b2', name: 'Vehicle Fuel', amount: 400.00, spent: 328, leftToSpend: 392, limit: 720, progress: 87.5, status: 'Locked 3 months ago', warning: 'Whoops! You almost touch your budget.' },
+  { id: 'b3', name: 'Gym Membership', amount: 50.00, spent: 50, leftToSpend: 0, limit: 50, progress: 100, status: 'Available' },
 ];
 
-export const goals = [
-    { id: 'w1', name: 'Vacation Fund', amount: 3000, saved: 1250.75, progress: 41.69 },
-    { id: 'w2', name: 'Emergency', amount: 10000, saved: 5040.00, progress: 50.4 },
-    { id: 'w3', name: 'New Gadgets', amount: 1000, saved: 450.00, progress: 45 },
+
+export const goals: Goal[] = [
+    { id: 'g1', name: 'Investment', balance: 1640.23, goal: 23468.00, daysLeft: 65, progress: 7, growth: 12, status: 'Live' },
+    { id: 'g2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, daysLeft: 25, progress: 75, status: 'Live' },
+    { id: 'g3', name: 'Car Purchase', balance: 30500, goal: 400500, daysLeft: 35, progress: 15, status: 'Live' },
+    { id: 'g4', name: 'House Downpayment', balance: 50000, goal: 50000, daysLeft: 0, progress: 100, status: 'Finished' },
+    { id: 'g5', name: 'Vacation', balance: 2500, goal: 2500, daysLeft: 0, progress: 100, status: 'Finished' },
+
 ];
+
+export const topGoals = wallets.filter(wallet => wallet.goal).map(wallet => ({
+  id: wallet.id,
+  name: wallet.name,
+  balance: wallet.balance,
+  goal: wallet.goal || 0,
+  daysLeft: Math.floor(Math.random() * 100), // Placeholder
+}));
+
 
 export const circles: Circle[] = [
   {
