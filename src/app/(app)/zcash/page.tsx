@@ -66,9 +66,11 @@ export default function ZCashPage() {
                 Send
             </Link>
         </Button>
-         <Button size="lg" variant="secondary" className="h-14">
-            <Icons.receive className="mr-2 h-5 w-5" />
-            Request
+         <Button size="lg" variant="secondary" className="h-14" asChild>
+            <Link href="/request">
+                <Icons.receive className="mr-2 h-5 w-5" />
+                Request
+            </Link>
         </Button>
       </div>
 

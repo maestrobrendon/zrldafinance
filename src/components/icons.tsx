@@ -143,8 +143,8 @@ export const Icons = {
       strokeLinejoin="round"
       {...props}
     >
-      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 13.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
-      <path d="M12 7.5V12h2.25" />
+      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-3.5 10a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
+      <path d="M12 14.5V12H9.75" />
     </svg>
   ),
   withdraw: (props: React.SVGProps<SVGSVGElement>) => (
