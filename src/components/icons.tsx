@@ -32,6 +32,9 @@ import {
   Flame,
   ArrowUp,
   X,
+  Calendar,
+  Image,
+  Info
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -114,4 +117,7 @@ export const Icons = {
   flame: Flame,
   arrowUp: ArrowUp,
   x: X,
+  calendar: Calendar,
+  image: Image,
+  info: Info
 };

@@ -15,11 +15,12 @@ import AnalyticsSection from "@/components/dashboard/analytics-section";
 import DashboardTabs from "@/components/dashboard/dashboard-tabs";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
+import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 
 const quickActions = [
     { label: "Send to", icon: Icons.send },
     { label: "Top up", icon: Icons.add },
-    { label: "Budget", icon: Icons.target },
+    { label: "Budget", icon: Icons.target, isDialog: true },
     { label: "Withdraw", icon: Icons.history },
 ];
 
@@ -84,13 +85,27 @@ export default function DashboardPage() {
       <div className="grid grid-cols-4 gap-4">
         {quickActions.map((action) => (
             <div key={action.label} className="flex flex-col items-center gap-2">
-            <Button
-                variant="outline"
-                size="icon"
-                className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
-            >
-                <action.icon className="h-6 w-6 text-primary" />
-            </Button>
+            {action.isDialog ? (
+              <CreateWalletDialog 
+                trigger={
+                  <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
+                  >
+                      <action.icon className="h-6 w-6 text-primary" />
+                  </Button>
+                }
+              />
+            ) : (
+               <Button
+                  variant="outline"
+                  size="icon"
+                  className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
+              >
+                  <action.icon className="h-6 w-6 text-primary" />
+              </Button>
+            )}
             <span className="text-sm font-medium">{action.label}</span>
             </div>
         ))}

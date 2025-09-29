@@ -6,23 +6,20 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, Wallet, budgets as initialBudgets, goals as initialGoals, wallets as initialWallets } from "@/lib/data";
+import { Wallet, budgets as initialBudgets, goals as initialGoals } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import TopGoals from "@/components/wallets/top-goals";
 import YourBudget from "@/components/wallets/your-budget";
 import YourGoals from "@/components/wallets/your-goals";
+import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
+
+const initialWallets: Wallet[] = [
+  { id: 'w1', name: 'Investment', balance: 1640.23, goal: 23468.00, currency: 'USD', color: 'bg-blue-500' },
+  { id: 'w2', name: 'Emergency Funds', balance: 3500.00, goal: 5000, currency: 'USD', color: 'bg-red-500' },
+  { id: 'w3', name: 'Car Purchase', balance: 30500.00, goal: 400500.00, currency: 'USD', color: 'bg-purple-500' },
+  { id: 'w4', name: 'Investments', balance: 15800.20, currency: 'USD', color: 'bg-green-500' },
+];
 
 const quickActions = [
   { label: "Add", icon: Icons.add, isDialog: true },
@@ -32,32 +29,16 @@ const quickActions = [
 
 export default function WalletsPage() {
   const [wallets, setWallets] = useState<Wallet[]>(initialWallets);
-  const [open, setOpen] = useState(false);
-  const [newWalletName, setNewWalletName] = useState("");
-  const [newWalletBalance, setNewWalletBalance] = useState("");
-  const [newWalletGoal, setNewWalletGoal] = useState("");
-
   const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balance, 0);
 
-  const handleAddWallet = () => {
-    if (!newWalletName || !newWalletBalance) {
-      // Basic validation
-      return;
-    }
+  const handleAddWallet = (wallet: Omit<Wallet, 'id' | 'currency' | 'color'>) => {
     const newWallet: Wallet = {
       id: `w${wallets.length + 1}`,
-      name: newWalletName,
-      balance: parseFloat(newWalletBalance),
-      goal: newWalletGoal ? parseFloat(newWalletGoal) : undefined,
       currency: 'USD',
-      color: 'bg-gray-500' // Default color
+      color: 'bg-gray-500', // Default color
+      ...wallet
     };
     setWallets([...wallets, newWallet]);
-    setOpen(false); // Close dialog
-    // Reset form
-    setNewWalletName("");
-    setNewWalletBalance("");
-    setNewWalletGoal("");
   };
 
   return (
@@ -84,68 +65,18 @@ export default function WalletsPage() {
             {quickActions.map((action) => (
               <div key={action.label} className="flex flex-col items-center gap-2">
                  {action.isDialog ? (
-                   <Dialog open={open} onOpenChange={setOpen}>
-                     <DialogTrigger asChild>
-                       <Button
-                         variant="outline"
-                         size="icon"
-                         className="w-16 h-16 rounded-full bg-background/50 border-primary/50 hover:bg-primary/10"
-                       >
-                         <action.icon className="h-6 w-6 text-primary" />
-                       </Button>
-                     </DialogTrigger>
-                     <DialogContent className="sm:max-w-[425px]">
-                       <DialogHeader>
-                         <DialogTitle>Create New Wallet</DialogTitle>
-                         <DialogDescription>
-                           Enter the details for your new wallet. Click save when you're done.
-                         </DialogDescription>
-                       </DialogHeader>
-                       <div className="grid gap-4 py-4">
-                         <div className="grid grid-cols-4 items-center gap-4">
-                           <Label htmlFor="name" className="text-right">
-                             Name
-                           </Label>
-                           <Input
-                             id="name"
-                             value={newWalletName}
-                             onChange={(e) => setNewWalletName(e.target.value)}
-                             className="col-span-3"
-                             placeholder="e.g. Vacation Fund"
-                           />
-                         </div>
-                         <div className="grid grid-cols-4 items-center gap-4">
-                           <Label htmlFor="balance" className="text-right">
-                             Balance
-                           </Label>
-                           <Input
-                             id="balance"
-                             type="number"
-                             value={newWalletBalance}
-                             onChange={(e) => setNewWalletBalance(e.target.value)}
-                             className="col-span-3"
-                             placeholder="0.00"
-                           />
-                         </div>
-                         <div className="grid grid-cols-4 items-center gap-4">
-                           <Label htmlFor="goal" className="text-right">
-                             Goal
-                           </Label>
-                           <Input
-                             id="goal"
-                             type="number"
-                             value={newWalletGoal}
-                             onChange={(e) => setNewWalletGoal(e.target.value)}
-                             className="col-span-3"
-                             placeholder="Optional"
-                           />
-                         </div>
-                       </div>
-                       <DialogFooter>
-                         <Button type="submit" onClick={handleAddWallet}>Save changes</Button>
-                       </DialogFooter>
-                     </DialogContent>
-                   </Dialog>
+                   <CreateWalletDialog 
+                      onWalletCreated={handleAddWallet}
+                      trigger={
+                         <Button
+                            variant="outline"
+                            size="icon"
+                            className="w-16 h-16 rounded-full bg-background/50 border-primary/50 hover:bg-primary/10"
+                          >
+                            <action.icon className="h-6 w-6 text-primary" />
+                          </Button>
+                      }
+                   />
                  ) : (
                   <Button
                     variant="outline"
