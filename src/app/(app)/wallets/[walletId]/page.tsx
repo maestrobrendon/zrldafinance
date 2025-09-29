@@ -65,7 +65,12 @@ const groupTransactionsByMonth = (transactions: Transaction[]) => {
 };
 
 export default function WalletDetailPage({ params: { walletId } }: { params: { walletId: string } }) {
-  
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const allItems = [...wallets, ...budgets, ...goals];
   const item = allItems.find(w => w.id === walletId);
 
@@ -299,7 +304,7 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                                             <div>
                                                 <p className="font-medium">{activity.description}</p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {format(parseISO(activity.date), 'MMM d, hh:mm a')}
+                                                    {isClient ? format(parseISO(activity.date), 'MMM d, hh:mm a') : ''}
                                                 </p>
                                             </div>
                                         </div>
