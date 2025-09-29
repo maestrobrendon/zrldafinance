@@ -108,7 +108,7 @@ export const sharedExpenses: SharedExpense[] = [
 ];
 
 export const mainBalance = {
-  balance: 8987.64,
+  balance: wallets.reduce((acc, wallet) => acc + wallet.balance, 0),
   currency: 'USD',
 };
 
@@ -132,7 +132,7 @@ export const goals: Goal[] = [
 
 ];
 
-const staticDaysLeft = [65, 25, 35];
+const staticDaysLeft = [65, 25, 35, 12, 48];
 export const topGoals = wallets
   .filter(wallet => wallet.goal)
   .map((wallet, index) => ({
