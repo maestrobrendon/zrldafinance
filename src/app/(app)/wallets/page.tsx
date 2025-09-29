@@ -30,7 +30,7 @@ const quickActions = [
 
 export default function WalletsPage() {
   const [wallets, setWallets] = useState<Wallet[]>(initialWallets);
-  const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balance, 0);
+  const totalBalance = initialWallets.reduce((acc, wallet) => acc + wallet.balance, 0);
 
   const handleAddWallet = (wallet: Omit<Wallet, 'id' | 'currency' | 'color'>) => {
     const newWallet: Wallet = {
@@ -103,3 +103,4 @@ export default function WalletsPage() {
     </div>
   );
 }
+
