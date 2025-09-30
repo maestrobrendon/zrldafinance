@@ -6,7 +6,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { user as initialUser, mainBalance } from "@/lib/data";
+import { mainBalance, type Wallet } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [showBanner, setShowBanner] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,12 +56,12 @@ export default function DashboardPage() {
     });
 
     if (user) {
-        const q = query(
+        const transactionsQuery = query(
             collection(db, "transactions"),
             where("userId", "==", user.uid)
         );
 
-        const unsubscribeTransactions = onSnapshot(q, (snapshot) => {
+        const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
             const transactionsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
@@ -73,9 +74,23 @@ export default function DashboardPage() {
             setLoading(false);
         });
 
+        const walletsQuery = query(
+            collection(db, "wallets"),
+            where("userId", "==", user.uid)
+        );
+
+        const unsubscribeWallets = onSnapshot(walletsQuery, (snapshot) => {
+            const walletsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as Wallet[];
+            setWallets(walletsData);
+        });
+
         return () => {
             unsubscribeAuth();
             unsubscribeTransactions();
+            unsubscribeWallets();
         }
     }
 
@@ -83,8 +98,8 @@ export default function DashboardPage() {
     return () => unsubscribeAuth();
   }, [user]);
 
-  const displayName = user?.displayName || initialUser.name;
-  const photoURL = user?.photoURL || initialUser.avatarUrl;
+  const displayName = user?.displayName || "User";
+  const photoURL = user?.photoURL || "";
 
   return (
     <div className="space-y-8">
@@ -188,7 +203,7 @@ export default function DashboardPage() {
       
       <Separator className="my-6" />
 
-      <AnalyticsSection />
+      <AnalyticsSection wallets={wallets} />
 
        <div>
         <div className="flex justify-between items-center mb-4">

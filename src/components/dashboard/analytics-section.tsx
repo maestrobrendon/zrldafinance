@@ -6,7 +6,7 @@ import * as React from "react"
 import { Lock } from "lucide-react"
 import { Pie, PieChart, Cell } from "recharts"
 import Link from "next/link";
-import { wallets as allWallets, Wallet } from "@/lib/data";
+import { Wallet, Goal } from "@/lib/data";
 
 import {
   Card,
@@ -28,42 +28,46 @@ const chartColors = [
 ];
 
 const viewModes = ["By Size", "By Goal"];
-const filters = ["All", "With Goals", "No Goals"];
+const filters = ["All", "Budgets", "Goals"];
 
-export default function AnalyticsSection() {
+interface AnalyticsSectionProps {
+    wallets: Wallet[];
+}
+
+export default function AnalyticsSection({ wallets }: AnalyticsSectionProps) {
     const [activeViewMode, setActiveViewMode] = React.useState("By Size");
     const [activeFilter, setActiveFilter] = React.useState("All");
     const [chartData, setChartData] = React.useState<any[]>([]);
 
     React.useEffect(() => {
-        let filteredWallets: Wallet[] = [...allWallets];
+        let filteredWallets: Wallet[] = [...wallets];
 
-        if (activeFilter === "With Goals") {
-            filteredWallets = allWallets.filter(w => w.goal);
-        } else if (activeFilter === "No Goals") {
-            filteredWallets = allWallets.filter(w => !w.goal);
+        if (activeFilter === "Budgets") {
+            filteredWallets = wallets.filter(w => w.type === 'budget');
+        } else if (activeFilter === "Goals") {
+            filteredWallets = wallets.filter(w => w.type === 'goal');
         }
 
         if (activeViewMode === "By Goal") {
-            filteredWallets = filteredWallets.filter(w => w.goal);
+            filteredWallets = filteredWallets.filter(w => w.type === 'goal');
         }
         
         let sortedWallets = filteredWallets;
         if (activeViewMode === 'By Goal') {
-            sortedWallets = [...filteredWallets].sort((a, b) => (b.goal || 0) - (a.goal || 0));
+            sortedWallets = [...filteredWallets].sort((a, b) => ((b as Goal).goalAmount || 0) - ((a as Goal).goalAmount || 0));
         } else { // By Size
             sortedWallets = [...filteredWallets].sort((a, b) => b.balance - a.balance);
         }
 
         const data = sortedWallets.map((wallet, index) => ({
             name: wallet.name,
-            value: activeViewMode === 'By Goal' ? wallet.goal : wallet.balance,
+            value: activeViewMode === 'By Goal' && wallet.type === 'goal' ? (wallet as Goal).goalAmount : wallet.balance,
             fill: chartColors[index % chartColors.length],
-            locked: !!wallet.goal,
+            isGoal: wallet.type === 'goal',
         }));
         
         setChartData(data);
-    }, [activeViewMode, activeFilter]);
+    }, [wallets, activeViewMode, activeFilter]);
 
     const totalValue = chartData.reduce((acc, curr) => acc + curr.value, 0)
 
@@ -151,7 +155,7 @@ export default function AnalyticsSection() {
                   style={{ backgroundColor: entry.fill }}
                 />
                 <span className="text-sm text-muted-foreground">{entry.name}</span>
-                {entry.locked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                {entry.isGoal && <Lock className="h-3 w-3 text-muted-foreground" />}
               </div>
               <div className="text-right">
                 <p className="text-sm font-medium">
