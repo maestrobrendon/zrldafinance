@@ -16,52 +16,20 @@ interface YourGoalsProps {
 }
 
 export default function YourGoals({ goals }: YourGoalsProps) {
-  const [activeTab, setActiveTab] = useState<GoalStatusFilter>("Live");
-
-  const filteredGoals = goals.filter((goal) => {
-    const progress = goal.goalAmount ? (goal.balance / goal.goalAmount) * 100 : 0;
-    if (activeTab === "Live") return progress < 100;
-    if (activeTab === "Finished") return progress >= 100;
-    return false;
-  });
-
+  
   if (goals.length === 0) {
     return (
-         <div className="space-y-4">
-            <h2 className="text-2xl font-bold tracking-tight">Your Goals</h2>
-            <Card className="bg-card/50">
-                <CardContent className="p-6 text-center">
-                    <p className="text-muted-foreground">You haven't created any goals yet.</p>
-                </CardContent>
-            </Card>
-        </div>
+        <Card className="bg-card/50">
+            <CardContent className="p-6 text-center">
+                <p className="text-muted-foreground">You haven't created any goals yet.</p>
+            </CardContent>
+        </Card>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold tracking-tight">Your Goals</h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={activeTab === "Live" ? "link" : "ghost"}
-            onClick={() => setActiveTab("Live")}
-            className={`font-semibold ${activeTab === 'Live' ? 'text-primary' : 'text-muted-foreground'}`}
-          >
-            Live
-          </Button>
-          <Button
-            variant={activeTab === "Finished" ? "link" : "ghost"}
-            onClick={() => setActiveTab("Finished")}
-            className={`font-semibold ${activeTab === 'Finished' ? 'text-primary' : 'text-muted-foreground'}`}
-          >
-            Finished
-          </Button>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {filteredGoals.length > 0 ? filteredGoals.map((item: Goal) => {
+        {goals.map((item: Goal) => {
             const progress = item.goalAmount ? (item.balance / item.goalAmount) * 100 : 0;
             const daysLeft = item.deadline ? differenceInDays(item.deadline, new Date()) : null;
 
@@ -100,10 +68,7 @@ export default function YourGoals({ goals }: YourGoalsProps) {
                 </Card>
             </Link>
         )
-        }) : (
-            <p className="text-muted-foreground text-center pt-4">No {activeTab.toLowerCase()} goals.</p>
-        )}
-      </div>
+        })}
     </div>
   );
 }

@@ -64,35 +64,55 @@ export default function WalletsPage() {
   const budgets = wallets.filter(w => w.type === 'budget') as Budget[];
   const goals = wallets.filter(w => w.type === 'goal') as Goal[];
   
-  if (loading) {
-    return (
-        <div className="space-y-8">
-            <div className="flex justify-between items-center">
-                <Skeleton className="h-9 w-24" />
-                 <Skeleton className="h-10 w-10 rounded-full" />
-            </div>
-            <Skeleton className="h-10 w-full" />
-            <div className="space-y-4">
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-40 w-full" />
-            </div>
-        </div>
-    )
-  }
+  const renderContent = () => {
+    if (loading) {
+      return (
+          <div className="space-y-4 pt-6">
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-40 w-full" />
+          </div>
+      )
+    }
 
-  if (error) {
+    if (error) {
+      return (
+          <Card className="mt-6">
+              <CardContent className="p-6 text-center">
+                <p className="text-destructive">{error}</p>
+              </CardContent>
+          </Card>
+      )
+    }
+
     return (
-        <div className="text-center py-10">
-            <p className="text-destructive">{error}</p>
-        </div>
+        <Tabs defaultValue="budget" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 gap-2">
+                <TabsTrigger value="budget" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full">Budget</TabsTrigger>
+                <TabsTrigger value="goals" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full">Goals</TabsTrigger>
+                <TabsTrigger value="circles" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full">Circles</TabsTrigger>
+            </TabsList>
+            <TabsContent value="budget" className="mt-6">
+                <YourBudget budgets={budgets} />
+            </TabsContent>
+            <TabsContent value="goals" className="mt-6">
+                <YourGoals goals={goals} />
+            </TabsContent>
+            <TabsContent value="circles" className="mt-6">
+                <Card className="bg-card/50">
+                    <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">You are not part of any circles yet.</p>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
     )
   }
 
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">My Wallet</h1>
+        <h1 className="text-3xl font-bold tracking-tight">My Wallets</h1>
          <CreateWalletDialog 
             trigger={
                 <Button variant="outline" size="icon" className="rounded-full">
@@ -102,26 +122,7 @@ export default function WalletsPage() {
          />
       </div>
 
-      <Tabs defaultValue="budget" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-card/50">
-          <TabsTrigger value="budget">Budget</TabsTrigger>
-          <TabsTrigger value="goals">Goals</TabsTrigger>
-          <TabsTrigger value="circles">Circles</TabsTrigger>
-        </TabsList>
-        <TabsContent value="budget" className="mt-6">
-          <YourBudget budgets={budgets} />
-        </TabsContent>
-        <TabsContent value="goals" className="mt-6">
-          <YourGoals goals={goals} />
-        </TabsContent>
-        <TabsContent value="circles" className="mt-6">
-            <Card className="bg-card/50">
-                <CardContent className="p-6 text-center">
-                    <p className="text-muted-foreground">Circles are coming soon!</p>
-                </CardContent>
-            </Card>
-        </TabsContent>
-      </Tabs>
+      {renderContent()}
     </div>
   );
 }
