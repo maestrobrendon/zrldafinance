@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Sidebar,
   SidebarHeader,
@@ -15,7 +16,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { AppLogo } from "@/components/app-logo";
-import { user } from "@/lib/data";
+import { user as initialUser } from "@/lib/data";
+import { auth } from "@/lib/firebase";
+import type { User } from 'firebase/auth';
 
 const navItems = [
   { href: "/dashboard", icon: Icons.home, label: "Dashboard" },
@@ -27,6 +30,18 @@ const navItems = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+        setUser(firebaseUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const displayName = user?.displayName || initialUser.name;
+  const displayEmail = user?.email || initialUser.email;
+  const photoURL = user?.photoURL || initialUser.avatarUrl;
 
   return (
     <Sidebar className="hidden md:flex">
@@ -55,12 +70,12 @@ export default function AppSidebar() {
          <Link href="/settings" className="block w-full">
             <div className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
                 <Avatar className="h-9 w-9">
-                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="avatar" />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={photoURL} alt={displayName} data-ai-hint="avatar" />
+                <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="overflow-hidden">
-                    <p className="font-medium text-sm truncate">{user.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    <p className="font-medium text-sm truncate">{displayName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
                 </div>
             </div>
          </Link>

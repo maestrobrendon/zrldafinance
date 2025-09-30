@@ -1,4 +1,5 @@
 
+import { auth } from '@/lib/firebase';
 
 export type User = {
   name: string;
@@ -90,11 +91,40 @@ export type Goal = {
   deadline?: string;
 }
 
-export const user: User = {
+// Default user data for new sign-ups
+export const defaultUser: User = {
   name: 'Alex Doe',
   email: 'alex.doe@example.com',
   avatarUrl: 'https://picsum.photos/seed/1/100/100',
 };
+
+
+export const getUser = () => {
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+        return {
+            name: firebaseUser.displayName || defaultUser.name,
+            email: firebaseUser.email || defaultUser.email,
+            avatarUrl: firebaseUser.photoURL || defaultUser.avatarUrl
+        }
+    }
+    return defaultUser;
+}
+
+export let user = getUser();
+
+auth.onAuthStateChanged(firebaseUser => {
+    if (firebaseUser) {
+        user = {
+            name: firebaseUser.displayName || defaultUser.name,
+            email: firebaseUser.email || defaultUser.email,
+            avatarUrl: firebaseUser.photoURL || defaultUser.avatarUrl
+        };
+    } else {
+        user = defaultUser;
+    }
+});
+
 
 export const wallets: Wallet[] = [
   { id: 'w1', name: 'Investment', balance: 1640.23, goal: 23468.00, currency: 'USD', color: 'bg-blue-500' },

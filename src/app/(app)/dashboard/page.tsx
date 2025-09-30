@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, user, transactions, walletActivities } from "@/lib/data";
+import { mainBalance, user as initialUser, transactions, walletActivities } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
@@ -16,6 +16,8 @@ import DashboardTabs from "@/components/dashboard/dashboard-tabs";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
+import { auth } from "@/lib/firebase";
+import type { User } from 'firebase/auth';
 
 const quickActions = [
     { label: "Send To", icon: Icons['send-2'], href: "/send" },
@@ -39,21 +41,33 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
 
 export default function DashboardPage() {
   const [showBanner, setShowBanner] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+        setUser(firebaseUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const combinedActivity = [...transactions, ...walletActivities]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const displayName = user?.displayName || initialUser.name;
+  const photoURL = user?.photoURL || initialUser.avatarUrl;
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
          <Link href="/settings">
             <Avatar className="h-10 w-10">
-            <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="avatar" />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={photoURL} alt={displayName} data-ai-hint="avatar" />
+            <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
             </Avatar>
         </Link>
         <div className="text-center">
             <p className="text-sm text-muted-foreground">Welcome,</p>
-            <h1 className="text-xl font-bold tracking-tight">{user.name}</h1>
+            <h1 className="text-xl font-bold tracking-tight">{displayName}</h1>
         </div>
         <Button variant="ghost" size="icon" className="relative rounded-full">
             <Icons.notification className="h-6 w-6" />
