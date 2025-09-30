@@ -206,14 +206,16 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
           <DialogTitle>Create New Wallet</DialogTitle>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as WalletType)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50 mx-6 rounded-md">
-            <TabsTrigger value="budget" className="rounded-sm">
-                <Icons.calendar className="mr-2 h-4 w-4"/> Budget
-            </TabsTrigger>
-            <TabsTrigger value="goal" className="rounded-sm">
-                <Icons.target className="mr-2 h-4 w-4"/> Goal
-            </TabsTrigger>
-          </TabsList>
+          <div className="px-6">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50 rounded-md">
+                <TabsTrigger value="budget" className="rounded-sm">
+                    <Icons.calendar className="mr-2 h-4 w-4"/> Budget
+                </TabsTrigger>
+                <TabsTrigger value="goal" className="rounded-sm">
+                    <Icons.target className="mr-2 h-4 w-4"/> Goal
+                </TabsTrigger>
+            </TabsList>
+          </div>
           <TabsContent value="budget" className="px-6 py-4 max-h-[80vh] overflow-y-auto">
             <Form {...budgetForm}>
               <form onSubmit={budgetForm.handleSubmit(onSubmit)} className="space-y-6">
