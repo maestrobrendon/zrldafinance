@@ -61,7 +61,12 @@ export default function DashboardPage() {
             });
 
             // Wallets listener
-            const walletsQuery = query(collection(db, "wallets"), where("userId", "==", firebaseUser.uid));
+            const walletsQuery = query(
+                collection(db, "wallets"), 
+                where("userId", "==", firebaseUser.uid), 
+                orderBy("createdAt", "desc"), 
+                limit(6)
+            );
             const unsubscribeWallets = onSnapshot(walletsQuery, (querySnapshot) => {
                 const userWallets: Wallet[] = [];
                 querySnapshot.forEach((doc) => {
@@ -318,3 +323,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
