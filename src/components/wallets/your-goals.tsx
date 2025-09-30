@@ -63,7 +63,7 @@ export default function YourGoals({ goals }: YourGoalsProps) {
       <div className="space-y-4">
         {filteredGoals.length > 0 ? filteredGoals.map((item: Goal) => {
             const progress = item.goalAmount ? (item.balance / item.goalAmount) * 100 : 0;
-            const daysLeft = item.deadline ? differenceInDays(item.deadline.toDate(), new Date()) : null;
+            const daysLeft = item.deadline ? differenceInDays(item.deadline, new Date()) : null;
 
           return (
               <Link href={`/wallets/${item.id}`} key={item.id} className="block">

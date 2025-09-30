@@ -37,7 +37,7 @@ export default function TopGoals({ goals }: TopGoalsProps) {
         <CarouselContent>
             {topGoals.map((goal) => {
                 const progress = goal.goalAmount ? (goal.balance / goal.goalAmount) * 100 : 0;
-                const daysLeft = goal.deadline ? differenceInDays(goal.deadline.toDate(), new Date()) : 0;
+                const daysLeft = goal.deadline ? differenceInDays(goal.deadline, new Date()) : 0;
                 
                 return (
                     <CarouselItem key={goal.id} className="basis-2/3 md:basis-1/3">
