@@ -21,6 +21,7 @@ export default function AccountSettingsPage() {
     const [ztag, setZtag] = useState("");
     const [phone, setPhone] = useState("");
     const [avatarUrl, setAvatarUrl] = useState('https://picsum.photos/seed/1/100/100');
+    const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [isSaving, setIsSaving] = useState(false);
@@ -62,27 +63,32 @@ export default function AccountSettingsPage() {
 
         setIsSaving(true);
         
-        // In a real app, here you would:
-        // 1. Check if the new ztag is unique against the database.
-        //    This requires a backend function (like a Cloud Function) for security.
-        //    const isUnique = await checkZtagUniqueness(ztag);
-        //    if (!isUnique) { toast({ variant: "destructive", title: "Ztag taken" }); return; }
-        
-        // 2. If email is changed, trigger Firebase's email verification flow.
-        //    if (email !== user.email) { await verifyBeforeUpdateEmail(user, email); }
+        // In a real app, you would:
+        // 1. If a newAvatarFile exists, upload it to Firebase Storage.
+        //    const photoURL = await uploadFile(newAvatarFile);
+        // 2. Then, use that URL to update the profile.
+
+        // For this prototype, we'll simulate the UI change but won't do the upload to avoid errors.
+        // We will only update attributes that don't require a backend service.
+        const updatedProfile: { displayName?: string; photoURL?: string } = {
+            displayName: name,
+        };
+
+        // Only include photoURL if it's NOT a data URI (i.e., not a newly selected file)
+        // This prevents the "URL too long" error.
+        if (avatarUrl && !avatarUrl.startsWith('data:')) {
+            updatedProfile.photoURL = avatarUrl;
+        }
 
         try {
             // Update Firebase Auth profile
-            await updateProfile(user, {
-                displayName: name,
-                photoURL: avatarUrl,
-            });
+            await updateProfile(user, updatedProfile);
 
             // Update Firestore document
             const userDocRef = doc(db, "users", user.uid);
             await updateDoc(userDocRef, {
                 name: name,
-                photoURL: avatarUrl,
+                photoURL: user.photoURL, // Keep Firestore in sync with what's in Auth
                 phone: phone,
                 ztag: ztag,
                 // If ztag was changed, update the timestamp
@@ -93,7 +99,9 @@ export default function AccountSettingsPage() {
                 title: "Profile Updated",
                 description: "Your changes have been saved successfully.",
             });
+             setNewAvatarFile(null);
         } catch (error: any) {
+             console.error("Update error:", error.message);
             toast({
                 variant: "destructive",
                 title: "Update Failed",
@@ -110,11 +118,11 @@ export default function AccountSettingsPage() {
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file && auth.currentUser) {
+        if (file) {
+            setNewAvatarFile(file);
             const reader = new FileReader();
             reader.onload = (e) => {
                 const result = e.target?.result as string;
-                // In a real app, you would upload this to Firebase Storage and get a URL
                 setAvatarUrl(result);
             };
             reader.readAsDataURL(file);
