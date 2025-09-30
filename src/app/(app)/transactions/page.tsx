@@ -1,12 +1,13 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
-import { transactions as allTransactions, type Transaction } from "@/lib/data";
+import { type Transaction } from "@/lib/data";
 import { format } from "date-fns";
+import { auth, db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
   Entertainment: Icons.entertainment,
@@ -32,9 +33,48 @@ const groupTransactionsByDate = (transactions: Transaction[]) => {
 };
 
 export default function TransactionsPage() {
-    const [transactions] = useState<Transaction[]>(allTransactions);
-    const [loading] = useState(false);
-    const [error] = useState<string | null>(null);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(user => {
+            if (user) {
+                const q = query(
+                    collection(db, "transactions"),
+                    where("userId", "==", user.uid),
+                    orderBy("timestamp", "desc")
+                );
+
+                const unsubscribeSnap = onSnapshot(q, (querySnapshot) => {
+                    const userTransactions: Transaction[] = [];
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        userTransactions.push({
+                            id: doc.id,
+                            ...data,
+                            timestamp: data.timestamp.toDate(),
+                            date: data.timestamp.toDate().toISOString(),
+                        } as Transaction);
+                    });
+                    setTransactions(userTransactions);
+                    setLoading(false);
+                }, (err) => {
+                    console.error("Error fetching transactions: ", err);
+                    setError("Failed to load transactions. Please check your connection and try again.");
+                    setLoading(false);
+                });
+
+                return () => unsubscribeSnap();
+            } else {
+                setTransactions([]);
+                setLoading(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
 
     const groupedTransactions = groupTransactionsByDate(transactions);
 
@@ -113,5 +153,3 @@ export default function TransactionsPage() {
         </div>
     );
 }
-
-    

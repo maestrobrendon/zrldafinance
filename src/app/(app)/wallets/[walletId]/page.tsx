@@ -6,7 +6,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { type Wallet, type Transaction, wallets as allWallets, mainBalance } from "@/lib/data";
+import { type Wallet, type Transaction, mainBalance } from "@/lib/data";
 import { Progress } from "@/components/ui/progress";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { Icons } from "@/components/icons";
@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AddFundsDialog } from "@/components/wallets/add-funds-dialog";
 import { WithdrawFundsDialog } from "@/components/wallets/withdraw-funds-dialog";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
@@ -45,12 +47,33 @@ const groupTransactionsByMonth = (transactions: Transaction[]) => {
 };
 
 export default function WalletDetailPage({ params: { walletId } }: { params: { walletId: string } }) {
-  const wallet = allWallets.find(w => w.id === walletId);
+  const [wallet, setWallet] = React.useState<Wallet | null>(null);
   
+  React.useEffect(() => {
+    if (walletId) {
+      const walletDocRef = doc(db, 'wallets', walletId);
+      const unsubscribe = onSnapshot(walletDocRef, (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          setWallet({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate(),
+            updatedAt: data.updatedAt?.toDate(),
+            deadline: data.deadline?.toDate(),
+          } as Wallet);
+        } else {
+          setWallet(null);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [walletId]);
+
   if (!wallet) {
     return (
       <div className="space-y-8 p-4 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-destructive">Wallet not found.</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-destructive">Wallet not found or loading...</h1>
         <Button asChild>
             <Link href="/wallets">Go Back to Wallets</Link>
         </Button>
@@ -275,5 +298,3 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
     </div>
   );
 }
-
-    
