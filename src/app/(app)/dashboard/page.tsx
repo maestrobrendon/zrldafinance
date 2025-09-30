@@ -6,12 +6,11 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { type Transaction, type Wallet } from "@/lib/data";
+import { type Transaction, type Wallet, type Budget, type Goal } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import YourWallets from "@/components/dashboard/your-wallets";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
@@ -19,6 +18,9 @@ import { auth, db } from "@/lib/firebase";
 import type { User } from 'firebase/auth';
 import { collection, onSnapshot, query, where, doc, orderBy, limit } from "firebase/firestore";
 import AnalyticsSection from "@/components/dashboard/analytics-section";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import YourBudget from "@/components/wallets/your-budget";
+import YourGoals from "@/components/wallets/your-goals";
 
 const quickActions = [
     { label: "Send To", icon: Icons['send-2'], href: "/send" },
@@ -124,6 +126,9 @@ export default function DashboardPage() {
   const displayName = user?.displayName || "User";
   const photoURL = user?.photoURL || "";
 
+  const budgets = wallets.filter(w => w.type === 'budget') as Budget[];
+  const goals = wallets.filter(w => w.type === 'goal') as Goal[];
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -226,7 +231,43 @@ export default function DashboardPage() {
       
       <Separator className="my-6" />
 
-      <YourWallets wallets={wallets} />
+       <div className="space-y-4">
+        <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold tracking-tight">My Wallets</h2>
+            <div className="flex items-center gap-2">
+                <Button variant="link" asChild>
+                    <Link href="/wallets">View All</Link>
+                </Button>
+                 <CreateWalletDialog 
+                    trigger={
+                        <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                            <Icons.add className="h-4 w-4" />
+                        </Button>
+                    }
+                 />
+            </div>
+        </div>
+        <Tabs defaultValue="budget" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-transparent p-0">
+                <TabsTrigger value="budget" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">Budget</TabsTrigger>
+                <TabsTrigger value="goals" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">Goals</TabsTrigger>
+                <TabsTrigger value="circles" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">Circles</TabsTrigger>
+            </TabsList>
+            <TabsContent value="budget" className="mt-6">
+                <YourBudget budgets={budgets} />
+            </TabsContent>
+            <TabsContent value="goals" className="mt-6">
+                <YourGoals goals={goals} />
+            </TabsContent>
+            <TabsContent value="circles" className="mt-6">
+                <Card className="bg-card/50">
+                    <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">You are not part of any circles yet.</p>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
+      </div>
 
        <div>
         <div className="flex justify-between items-center mb-4">

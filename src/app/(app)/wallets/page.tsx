@@ -2,18 +2,15 @@
 "use client";
 
 import * as React from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type Wallet, type Budget, type Goal } from "@/lib/data";
+import { type Wallet } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import YourBudget from "@/components/wallets/your-budget";
-import YourGoals from "@/components/wallets/your-goals";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import { auth, db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import YourWallets from "@/components/dashboard/your-wallets";
 
 
 export default function WalletsPage() {
@@ -60,9 +57,6 @@ export default function WalletsPage() {
 
     return () => unsubscribe();
   }, []);
-
-  const budgets = wallets.filter(w => w.type === 'budget') as Budget[];
-  const goals = wallets.filter(w => w.type === 'goal') as Goal[];
   
   const renderContent = () => {
     if (loading) {
@@ -84,28 +78,17 @@ export default function WalletsPage() {
           </Card>
       )
     }
+    
+    if(wallets.length > 0) {
+        return <YourWallets wallets={wallets} />
+    }
 
     return (
-        <Tabs defaultValue="budget" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 gap-2">
-                <TabsTrigger value="budget" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full">Budget</TabsTrigger>
-                <TabsTrigger value="goals" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full">Goals</TabsTrigger>
-                <TabsTrigger value="circles" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full">Circles</TabsTrigger>
-            </TabsList>
-            <TabsContent value="budget" className="mt-6">
-                <YourBudget budgets={budgets} />
-            </TabsContent>
-            <TabsContent value="goals" className="mt-6">
-                <YourGoals goals={goals} />
-            </TabsContent>
-            <TabsContent value="circles" className="mt-6">
-                <Card className="bg-card/50">
-                    <CardContent className="p-6 text-center">
-                        <p className="text-muted-foreground">You are not part of any circles yet.</p>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-        </Tabs>
+        <Card className="bg-card/50 mt-6">
+            <CardContent className="p-6 text-center">
+                <p className="text-muted-foreground">You haven't created any wallets yet.</p>
+            </CardContent>
+        </Card>
     )
   }
 
