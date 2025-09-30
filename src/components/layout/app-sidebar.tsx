@@ -25,7 +25,7 @@ const navItems = [
   { href: "/zcash", icon: Icons.wallet, label: "ZCash" },
   { href: "/wallets", icon: Icons.logo, label: "Wallets" },
   { href: "/circles", icon: Icons.users, label: "Circles" },
-  { href: "/settings", icon: Icons.settings, label: "Settings" },
+  { href: "/settings", icon: Icons.user, label: "Profile" },
 ];
 
 export default function AppSidebar() {
