@@ -50,20 +50,23 @@ export default function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith(item.href)}
-                tooltip={item.label}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith(item.href)}
+                  tooltip={item.label}
+                >
+                  <Link href={item.href}>
+                    <Icon />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
