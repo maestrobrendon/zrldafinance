@@ -23,14 +23,18 @@ export default function AccountSettingsPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        if (user) {
-            setName(user.displayName || "");
-            setEmail(user.email || "");
-            setAvatarUrl(user.photoURL || 'https://picsum.photos/seed/1/100/100');
-        }
-    }, [user]);
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if (user) {
+                setName(user.displayName || "");
+                setEmail(user.email || "");
+                setAvatarUrl(user.photoURL || 'https://picsum.photos/seed/1/100/100');
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     const handleSaveChanges = async () => {
+        const user = auth.currentUser;
         if (!user) return;
 
         try {
@@ -40,6 +44,7 @@ export default function AccountSettingsPage() {
             });
             await setDoc(doc(db, "users", user.uid), {
                 displayName: name,
+                email: email, // email is not editable here, but good to store
                 photoURL: avatarUrl
             }, { merge: true });
 
@@ -62,13 +67,13 @@ export default function AccountSettingsPage() {
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
+        if (file && auth.currentUser) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const result = e.target?.result as string;
-                // For prototype, we'll use localStorage to 'store' the image
+                // For prototype, we'll use localStorage to 'store' the image locally
                 // In a real app, you would upload this to Firebase Storage
-                localStorage.setItem(`avatar_${user?.uid}`, result);
+                localStorage.setItem(`avatar_${auth.currentUser?.uid}`, result);
                 setAvatarUrl(result);
             };
             reader.readAsDataURL(file);
@@ -76,13 +81,13 @@ export default function AccountSettingsPage() {
     };
     
      useEffect(() => {
-        if(user) {
-            const storedAvatar = localStorage.getItem(`avatar_${user.uid}`);
+        if(auth.currentUser) {
+            const storedAvatar = localStorage.getItem(`avatar_${auth.currentUser.uid}`);
             if (storedAvatar) {
                 setAvatarUrl(storedAvatar);
             }
         }
-    }, [user]);
+    }, [auth.currentUser]);
 
 
     return (

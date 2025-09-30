@@ -26,7 +26,7 @@ const settingsItems = [
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(auth.currentUser);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
@@ -112,4 +112,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

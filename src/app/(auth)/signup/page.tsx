@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { defaultUser } from "@/lib/data";
 
@@ -36,13 +36,18 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
+      // Update user profile
+      await updateProfile(user, {
+        displayName: name,
+        photoURL: defaultUser.avatarUrl,
+      });
+
       // Create user document in Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         displayName: name,
         email: user.email,
         photoURL: defaultUser.avatarUrl,
-        // You can add other default fields here
       });
 
       router.push("/dashboard");
