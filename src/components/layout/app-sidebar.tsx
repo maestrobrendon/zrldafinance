@@ -16,7 +16,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { AppLogo } from "@/components/app-logo";
-import { user as initialUser } from "@/lib/data";
 import { auth } from "@/lib/firebase";
 import type { User } from 'firebase/auth';
 
@@ -39,9 +38,9 @@ export default function AppSidebar() {
     return () => unsubscribe();
   }, []);
 
-  const displayName = user?.displayName || initialUser.name;
-  const displayEmail = user?.email || initialUser.email;
-  const photoURL = user?.photoURL || initialUser.avatarUrl;
+  const displayName = user?.displayName || "User";
+  const displayEmail = user?.email || "";
+  const photoURL = user?.photoURL || "";
 
   return (
     <Sidebar className="hidden md:flex">
