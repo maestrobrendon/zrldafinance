@@ -36,10 +36,11 @@ export default function YourBudget({ budgets }: YourBudgetProps) {
         </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid md:grid-cols-2 gap-4">
         {budgets.map((item) => {
             const limit = item.limit || 0;
             const balance = item.balance || 0;
+            const spent = limit > 0 ? limit - balance : 0;
             const progress = limit > 0 ? (balance / limit) * 100 : 0;
             
             return (
@@ -53,22 +54,21 @@ export default function YourBudget({ budgets }: YourBudgetProps) {
                                 {item.status === 'open' ? 'Available' : 'Locked'}
                             </Badge>
                         </div>
-                        <p className="text-3xl font-bold">
-                            {new Intl.NumberFormat("en-US", {
-                                style: "currency",
-                                currency: "USD",
-                            }).format(limit)}
-                        </p>
-                        
-                        {limit > 0 && (
-                            <div className="space-y-2">
-                                <Progress value={progress} className="h-2" />
-                                <div className="flex justify-between text-sm">
-                                    <p className="text-muted-foreground">You have {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(balance)} left</p>
-                                    <p className="text-muted-foreground">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(limit)}</p>
-                                </div>
+                        <Progress value={progress} className="h-2" />
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                                <p className="text-xs text-muted-foreground">Spent</p>
+                                <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(spent)}</p>
                             </div>
-                        )}
+                            <div>
+                                <p className="text-xs text-muted-foreground">Left to Spend</p>
+                                <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(balance)}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted-foreground">Limit</p>
+                                <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(limit)}</p>
+                            </div>
+                        </div>
                     </CardContent>
                     </Card>
                 </Link>
