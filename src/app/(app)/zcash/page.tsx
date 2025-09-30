@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -30,7 +29,7 @@ export default function ZCashPage() {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [zcashBalance, setZcashBalance] = useState(10000); // Placeholder
-  
+
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
       setUser(firebaseUser);
@@ -44,11 +43,10 @@ export default function ZCashPage() {
 
   useEffect(() => {
     if (user) {
+        // Query for the 5 most recent transactions, sorted by timestamp.
         const transactionsQuery = query(
             collection(db, "transactions"),
             where("userId", "==", user.uid),
-            where("type", "!=", "income"),
-            orderBy("type"), 
             orderBy("timestamp", "desc"),
             limit(5)
         );
@@ -59,7 +57,11 @@ export default function ZCashPage() {
                 ...doc.data(),
                 date: doc.data().timestamp.toDate().toISOString(),
             })) as unknown as Transaction[];
-            setRecentTransactions(transactionsData);
+            
+            // Filter out 'income' transactions on the client side
+            const filteredTransactions = transactionsData.filter(tx => tx.type !== 'income');
+            
+            setRecentTransactions(filteredTransactions);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching ZCash transactions: ", error);
@@ -239,3 +241,5 @@ export default function ZCashPage() {
     </div>
   );
 }
+
+    
