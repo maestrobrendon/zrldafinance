@@ -18,6 +18,7 @@ import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import { auth, db } from "@/lib/firebase";
 import type { User } from 'firebase/auth';
 import { collection, onSnapshot, query, where, doc, orderBy, limit } from "firebase/firestore";
+import AnalyticsSection from "@/components/dashboard/analytics-section";
 
 const quickActions = [
     { label: "Send To", icon: Icons['send-2'], href: "/send" },
@@ -271,6 +272,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+       <AnalyticsSection wallets={wallets} />
     </div>
   );
 }
