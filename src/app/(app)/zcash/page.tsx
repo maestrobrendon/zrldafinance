@@ -1,18 +1,15 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
-import { type Transaction } from "@/lib/data";
+import { zcashBalance, transactions } from "@/lib/data";
 import Link from "next/link";
 import { format } from "date-fns";
-import { auth, db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, limit } from "firebase/firestore";
-import type { User } from "firebase/auth";
 
 
 const favoritePeople = [
@@ -25,57 +22,7 @@ const favoritePeople = [
 
 export default function ZCashPage() {
   const [showRequest, setShowRequest] = useState(true);
-  const [user, setUser] = useState<User | null>(auth.currentUser);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [zcashBalance, setZcashBalance] = useState(10000); // Placeholder
-
-  useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      if (!firebaseUser) {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribeAuth();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-        // Query for recent transactions.
-        const transactionsQuery = query(
-            collection(db, "transactions"),
-            where("userId", "==", user.uid),
-            limit(10) // Fetch a bit more to ensure we get non-income ones
-        );
-
-        const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-            const transactionsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                date: doc.data().timestamp.toDate().toISOString(),
-            })) as unknown as Transaction[];
-            
-            // Sort by date descending on the client
-            const sortedTransactions = transactionsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            
-            // Filter out 'income' transactions on the client side and take the first 5
-            const filteredTransactions = sortedTransactions.filter(tx => tx.type !== 'income').slice(0, 5);
-            
-            setRecentTransactions(filteredTransactions);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching ZCash transactions: ", error);
-            setLoading(false);
-        });
-
-        return () => {
-            unsubscribeTransactions();
-        }
-    }
-  }, [user]);
-
+  const recentTransactions = transactions.filter(tx => tx.type !== 'income').slice(0, 5);
 
   const moneyRequest = {
     name: 'Liz Dizon',
@@ -183,11 +130,7 @@ export default function ZCashPage() {
         <h2 className="text-2xl font-bold tracking-tight mb-4">Recent Activity</h2>
         <Card>
             <CardContent className="p-0">
-               {loading ? (
-                 <div className="flex justify-center items-center h-24">
-                    <Icons.logo className="h-6 w-6 animate-spin" />
-                </div>
-               ) : recentTransactions.length > 0 ? (
+               {recentTransactions.length > 0 ? (
                 <div className="space-y-4">
                 {recentTransactions.map((transaction, index) => (
                     <div key={transaction.id}>

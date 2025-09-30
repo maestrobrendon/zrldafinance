@@ -6,7 +6,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, type Wallet } from "@/lib/data";
+import { mainBalance, wallets, type Transaction } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
@@ -15,10 +15,8 @@ import AnalyticsSection from "@/components/dashboard/analytics-section";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
-import { auth, db } from "@/lib/firebase";
-import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 import type { User } from 'firebase/auth';
-import type { Transaction } from "@/lib/data";
 
 const quickActions = [
     { label: "Send To", icon: Icons['send-2'], href: "/send" },
@@ -39,92 +37,69 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
   Wallet: Icons.wallet,
 };
 
+const recentTransactions: Transaction[] = [
+    {
+        id: "1",
+        transactionId: 't1',
+        userId: 'u1',
+        amount: 15.99,
+        type: 'expense',
+        status: 'completed',
+        timestamp: new Date(),
+        date: "2024-07-29T10:00:00.000Z",
+        description: "Netflix",
+        category: "Entertainment",
+    },
+    {
+        id: "2",
+        transactionId: 't2',
+        userId: 'u1',
+        amount: 3500,
+        type: 'income',
+        status: 'completed',
+        timestamp: new Date(),
+        date: "2024-07-28T10:00:00.000Z",
+        description: "Salary",
+        category: "Income",
+    },
+    {
+        id: "3",
+        transactionId: 't3',
+        userId: 'u1',
+        amount: 124.50,
+        type: 'expense',
+        status: 'completed',
+        timestamp: new Date(),
+        date: "2024-07-27T10:00:00.000Z",
+        description: "Groceries",
+        category: "Groceries",
+    },
+     {
+        id: "4",
+        transactionId: 't4',
+        userId: 'u1',
+        amount: 5.75,
+        type: 'expense',
+        status: 'completed',
+        timestamp: new Date(),
+        date: "2024-07-26T10:00:00.000Z",
+        description: "Starbucks",
+        category: "Restaurants",
+    }
+];
+
 
 export default function DashboardPage() {
   const [showBanner, setShowBanner] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listen for authentication state changes.
-    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
         setUser(firebaseUser);
-        if (!firebaseUser) {
-            // If user logs out, clear the data and stop loading.
-            setWallets([]);
-            setRecentTransactions([]);
-            setLoading(false);
-        }
     });
     
-    return () => unsubscribeAuth();
+    return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (!user) return; // Exit if there's no user.
-
-    setLoading(true);
-
-    // Query for recent transactions for the logged-in user.
-    // We only filter by userId and limit the results for performance.
-    // Sorting will be handled on the client-side to avoid needing a composite index.
-    const transactionsQuery = query(
-        collection(db, "transactions"),
-        where("userId", "==", user.uid),
-        limit(10) // Fetch 10 to have enough data for client-side sorting/filtering.
-    );
-
-    // Set up the real-time listener.
-    const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-        const transactionsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            date: doc.data().timestamp.toDate().toISOString(),
-        })) as unknown as Transaction[];
-        
-        // Sort transactions by date descending on the client-side and take the first 4.
-        const sortedAndLimited = transactionsData
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .slice(0, 4);
-
-        setRecentTransactions(sortedAndLimited);
-        setLoading(false);
-    }, (error) => {
-        console.error("Error fetching recent transactions:", error);
-        if (error.code === 'permission-denied') {
-            console.error("Firestore security rules are blocking the query. Ensure rules allow this query.");
-        }
-        setLoading(false);
-    });
-
-    // Set up the real-time listener for user's wallets.
-    const walletsQuery = query(
-        collection(db, "wallets"),
-        where("userId", "==", user.uid)
-    );
-
-    const unsubscribeWallets = onSnapshot(walletsQuery, (snapshot) => {
-        const walletsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        })) as Wallet[];
-        setWallets(walletsData);
-    }, (error) => {
-        console.error("Error fetching wallets:", error);
-         if (error.code === 'permission-denied') {
-            console.error("Firestore security rules are blocking the query.");
-        }
-    });
-
-    // Return the cleanup function to unsubscribe from listeners on component unmount.
-    return () => {
-        unsubscribeTransactions();
-        unsubscribeWallets();
-    };
-}, [user]);
-
 
   const displayName = user?.displayName || "User";
   const photoURL = user?.photoURL || "";
@@ -242,15 +217,11 @@ export default function DashboardPage() {
         </div>
         <Card className="bg-card/50">
           <CardContent className="pt-6 space-y-4">
-            {loading ? (
-                <div className="flex justify-center items-center h-24">
-                    <Icons.logo className="h-6 w-6 animate-spin" />
-                </div>
-            ) : recentTransactions.length > 0 ? (
+            {recentTransactions.length > 0 ? (
               recentTransactions.map((activity, index) => {
                  const Icon = categoryIcons[activity.category] || Icons.grid;
                  return (
-                  <div key={activity.transactionId}>
+                  <div key={activity.id}>
                       <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                               <div className="bg-primary/20 text-primary p-3 rounded-lg">
@@ -283,5 +254,6 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
 
     

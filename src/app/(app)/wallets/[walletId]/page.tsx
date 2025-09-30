@@ -2,12 +2,11 @@
 "use client"
 
 import * as React from "react";
-import { doc, onSnapshot } from "firebase/firestore";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { type Wallet, type Transaction, mainBalance } from "@/lib/data";
+import { type Wallet, type Transaction, wallets as allWallets, mainBalance } from "@/lib/data";
 import { Progress } from "@/components/ui/progress";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { Icons } from "@/components/icons";
@@ -18,8 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AddFundsDialog } from "@/components/wallets/add-funds-dialog";
 import { WithdrawFundsDialog } from "@/components/wallets/withdraw-funds-dialog";
-import { db, auth } from "@/lib/firebase";
-import { User } from "firebase/auth";
+
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
   Entertainment: Icons.entertainment,
@@ -47,57 +45,12 @@ const groupTransactionsByMonth = (transactions: Transaction[]) => {
 };
 
 export default function WalletDetailPage({ params: { walletId } }: { params: { walletId: string } }) {
-  const [user, setUser] = React.useState<User | null>(auth.currentUser);
-  const [wallet, setWallet] = React.useState<Wallet | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(setUser);
-    return () => unsubscribeAuth();
-  }, []);
-
-  React.useEffect(() => {
-    if (user) {
-      const docRef = doc(db, "wallets", walletId);
-      const unsubscribe = onSnapshot(docRef, (doc) => {
-        if (doc.exists()) {
-          const data = doc.data() as Wallet;
-          // Ensure that the wallet belongs to the current user
-          if (data.userId === user.uid) {
-            setWallet({ id: doc.id, ...data });
-          } else {
-            setError("You do not have permission to view this wallet.");
-          }
-        } else {
-          setError("Wallet not found.");
-        }
-        setLoading(false);
-      }, (err) => {
-        console.error("Error fetching wallet:", err);
-        setError("Failed to load wallet data.");
-        setLoading(false);
-      });
-
-      return () => unsubscribe();
-    } else {
-      setLoading(false);
-    }
-  }, [walletId, user]);
-
-
-  if (loading) {
-    return (
-        <div className="flex justify-center items-center h-screen">
-            <Icons.logo className="h-10 w-10 animate-spin text-primary" />
-        </div>
-    );
-  }
-
-  if (error) {
+  const wallet = allWallets.find(w => w.id === walletId);
+  
+  if (!wallet) {
     return (
       <div className="space-y-8 p-4 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-destructive">{error}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-destructive">Wallet not found.</h1>
         <Button asChild>
             <Link href="/wallets">Go Back to Wallets</Link>
         </Button>
@@ -105,19 +58,40 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
     );
   }
 
-  if (!wallet) {
-    return null; // or a more specific "not found" component
-  }
-
   const isGoal = wallet.type === 'goal';
   const isBudget = wallet.type === 'budget';
   const progress = isGoal && wallet.goalAmount ? (wallet.balance / wallet.goalAmount) * 100 :
                    isBudget && wallet.limit ? (wallet.balance / wallet.limit) * 100 : 0;
-  const daysLeft = isGoal && wallet.deadline ? differenceInDays(wallet.deadline.toDate(), new Date()) : null;
+  const daysLeft = isGoal && wallet.deadline ? differenceInDays(wallet.deadline, new Date()) : null;
 
 
   // Mock data for transactions - replace with actual transaction fetching logic
-  const itemTransactions: Transaction[] = [];
+  const itemTransactions: Transaction[] = [
+    {
+      id: "t1",
+      transactionId: 't1',
+      userId: 'u1',
+      date: "2024-07-28T10:00:00.000Z",
+      description: "Contribution",
+      amount: 100,
+      type: "contribution",
+      status: "completed",
+      category: "Wallet",
+      timestamp: new Date()
+    },
+    {
+      id: "t2",
+      transactionId: 't2',
+      userId: 'u1',
+      date: "2024-07-25T14:30:00.000Z",
+      description: "Payment for concert tickets",
+      amount: 75,
+      type: "payment",
+      status: "completed",
+      category: "Entertainment",
+      timestamp: new Date()
+    },
+  ];
   const groupedTransactions = groupTransactionsByMonth(itemTransactions);
 
 
@@ -135,7 +109,7 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                 <div className="text-center">
                     <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 border-none">
                         <Icons.lock className="mr-1 h-3 w-3" />
-                         {isGoal && wallet.deadline ? `Locked until ${format(wallet.deadline.toDate(), 'MMM d, yyyy')}` : 'Locked'}
+                         {isGoal && wallet.deadline ? `Locked until ${format(wallet.deadline, 'MMM d, yyyy')}` : 'Locked'}
                     </Badge>
                 </div>
             )}
@@ -227,7 +201,7 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                         <Separator />
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Deadline</span>
-                            <span className="font-medium">{wallet.deadline ? format(wallet.deadline.toDate(), 'MMM d, yyyy') : 'Not set'}</span>
+                            <span className="font-medium">{wallet.deadline ? format(wallet.deadline, 'MMM d, yyyy') : 'Not set'}</span>
                         </div>
                          {daysLeft !== null && (
                             <>
@@ -301,3 +275,5 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
     </div>
   );
 }
+
+    

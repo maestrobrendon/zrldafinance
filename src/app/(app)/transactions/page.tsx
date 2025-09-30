@@ -1,15 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
-import { auth, db } from "@/lib/firebase";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { transactions as allTransactions, type Transaction } from "@/lib/data";
 import { format } from "date-fns";
-import type { User } from 'firebase/auth';
-import type { Transaction } from "@/lib/data";
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
   Entertainment: Icons.entertainment,
@@ -35,51 +32,9 @@ const groupTransactionsByDate = (transactions: Transaction[]) => {
 };
 
 export default function TransactionsPage() {
-    const [user, setUser] = useState<User | null>(auth.currentUser);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
-            setUser(firebaseUser);
-            if (!firebaseUser) {
-                setTransactions([]);
-                setLoading(false);
-            }
-        });
-        return () => unsubscribeAuth();
-    }, []);
-
-    useEffect(() => {
-        if (user) {
-            setLoading(true);
-            const q = query(
-                collection(db, "transactions"),
-                where("userId", "==", user.uid)
-            );
-
-            const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-                const transactionsData = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    date: doc.data().timestamp.toDate().toISOString(),
-                })) as unknown as Transaction[];
-
-                const sortedTransactions = transactionsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                setTransactions(sortedTransactions);
-                setLoading(false);
-            }, (err) => {
-                console.error(err);
-                setError("Failed to fetch transactions. Please try again later.");
-                setLoading(false);
-            });
-
-            return () => unsubscribeSnapshot();
-        } else {
-            setLoading(false);
-        }
-    }, [user]);
+    const [transactions] = useState<Transaction[]>(allTransactions);
+    const [loading] = useState(false);
+    const [error] = useState<string | null>(null);
 
     const groupedTransactions = groupTransactionsByDate(transactions);
 
@@ -158,3 +113,5 @@ export default function TransactionsPage() {
         </div>
     );
 }
+
+    

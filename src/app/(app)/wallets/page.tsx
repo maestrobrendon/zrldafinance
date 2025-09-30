@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import * as React from "react";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { type Wallet, type Budget, type Goal } from "@/lib/data";
+import { type Wallet, budgets, goals } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import TopGoals from "@/components/wallets/top-goals";
@@ -14,9 +14,6 @@ import YourBudget from "@/components/wallets/your-budget";
 import YourGoals from "@/components/wallets/your-goals";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import Link from 'next/link'
-import { auth, db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
-import type { User } from 'firebase/auth';
 
 const quickActions = [
   { label: "Add", icon: Icons['add-2'], isDialog: true },
@@ -26,63 +23,8 @@ const quickActions = [
 ];
 
 export default function WalletsPage() {
-  const [user, setUser] = useState<User | null>(auth.currentUser);
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Listen for changes in authentication state.
-    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      if (!firebaseUser) {
-        // Clear data and stop loading if the user logs out.
-        setWallets([]);
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribeAuth();
-  }, []);
-
-  useEffect(() => {
-    // Fetch wallets only if a user is logged in.
-    if (user) {
-      setLoading(true);
-      // Construct a query to get wallets for the current user, ordered by creation time.
-      const q = query(
-        collection(db, "wallets"),
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc")
-      );
-      
-      // Set up a real-time listener for the wallets query.
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const walletsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Wallet[];
-        setWallets(walletsData);
-        setLoading(false);
-      }, (error) => {
-        console.error("Error fetching wallets: ", error);
-        // Handle specific errors, like permission denied.
-        if (error.code === 'permission-denied') {
-            console.error("Firestore security rules are blocking the query.");
-        }
-        setLoading(false);
-      });
-
-      // Cleanup function to unsubscribe from the listener when the component unmounts.
-      return () => unsubscribe();
-    }
-  }, [user]);
-
-  // Calculate the total balance from all wallets.
-  const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balance, 0);
-
-  // Filter wallets into 'budget' and 'goal' categories.
-  const budgetWallets = wallets.filter(w => w.type === 'budget') as Budget[];
-  const goalWallets = wallets.filter(w => w.type === 'goal') as Goal[];
+  const allWallets: Wallet[] = [...budgets, ...goals];
+  const totalBalance = allWallets.reduce((acc, wallet) => acc + wallet.balance, 0);
 
   return (
     <div className="space-y-8">
@@ -137,18 +79,11 @@ export default function WalletsPage() {
         </CardContent>
       </Card>
       
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-            <Icons.logo className="h-8 w-8 animate-spin" />
-        </div>
-      ) : (
-        <>
-            <TopGoals goals={goalWallets} />
-            <YourBudget budgets={budgetWallets} />
-            <YourGoals goals={goalWallets} />
-        </>
-      )}
-
+      <TopGoals goals={goals} />
+      <YourBudget budgets={budgets} />
+      <YourGoals goals={goals} />
     </div>
   );
 }
+
+    
