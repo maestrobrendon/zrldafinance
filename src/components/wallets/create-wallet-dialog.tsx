@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -35,104 +35,110 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "../ui/card";
-import { Wallet } from "@/lib/data";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Separator } from "../ui/separator";
+import { auth, db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
+import type { Wallet } from "@/lib/data";
 
 type WalletType = "budget" | "goal";
 
 const budgetWalletSchema = z.object({
-  walletName: z.string().min(2, "Name must be at least 2 characters."),
-  totalBudget: z.coerce.number().positive("Amount must be positive."),
-  frequency: z.enum(["daily", "weekly", "bi-weekly", "monthly"]),
-  lock: z.boolean().default(false),
-  lockDuration: z.coerce.number().positive().optional(),
-  carryOver: z.boolean().default(false),
-  autoDisburse: z.boolean().default(false),
-  disbursementAmount: z.coerce.number().optional(),
-  disbursementFrequency: z.enum(["daily", "weekly", "monthly"]).optional(),
-  disbursementDay: z.string().optional(),
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  limit: z.coerce.number().positive("Amount must be positive."),
+  frequency: z.enum(["daily", "weekly", "monthly"]),
+  status: z.enum(["open", "locked"]).default("open"),
 });
 
-
 const goalWalletSchema = z.object({
-  goalName: z.string().min(2, "Name must be at least 2 characters."),
-  targetAmount: z.coerce.number().positive("Amount must be positive."),
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  goalAmount: z.coerce.number().positive("Amount must be positive."),
   deadline: z.date().optional(),
-  fundingSource: z.enum(["manual", "auto"]),
-  autoSchedule: z.string().optional(), // e.g., "weekly", "monthly"
-  lockUntilTarget: z.boolean().default(true),
+  status: z.enum(["open", "locked"]).default("locked"),
 });
 
 type CreateWalletDialogProps = {
   trigger: React.ReactNode;
-  onWalletCreated?: (wallet: Omit<Wallet, 'id' | 'currency' | 'color'>) => void;
 };
 
-const weekDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const monthDays = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
-
-
-export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDialogProps) {
+export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<WalletType>("budget");
 
   const budgetForm = useForm<z.infer<typeof budgetWalletSchema>>({
     resolver: zodResolver(budgetWalletSchema),
     defaultValues: {
-      walletName: "",
+      name: "",
       frequency: "monthly",
-      lock: false,
-      carryOver: false,
-      autoDisburse: false,
+      status: "open",
     },
   });
 
   const goalForm = useForm<z.infer<typeof goalWalletSchema>>({
     resolver: zodResolver(goalWalletSchema),
     defaultValues: {
-      goalName: "",
-      fundingSource: "manual",
-      lockUntilTarget: true,
+      name: "",
+      status: "locked",
     },
   });
 
-  const onSubmit = (values: any) => {
-    if(onWalletCreated) {
-        if(activeTab === 'budget') {
-            onWalletCreated({
-                name: values.walletName,
-                balance: values.totalBudget,
-            })
-        } else {
-             onWalletCreated({
-                name: values.goalName,
-                balance: 0, // Goal wallets start empty
-                goal: values.targetAmount,
-            })
+  const onSubmit = async (values: any) => {
+    const user = auth.currentUser;
+    if (!user) {
+        toast({ variant: "destructive", title: "Not Authenticated", description: "You must be logged in to create a wallet." });
+        return;
+    }
+
+    try {
+        let walletData: Omit<Wallet, 'id' | 'createdAt' | 'updatedAt'> = {
+            userId: user.uid,
+            balance: 0,
+            type: activeTab,
+            name: values.name,
+            status: values.status,
+        };
+
+        if (activeTab === 'budget') {
+            walletData = {
+                ...walletData,
+                limit: values.limit,
+                frequency: values.frequency,
+            };
+        } else { // goal
+            walletData = {
+                ...walletData,
+                goalAmount: values.goalAmount,
+                deadline: values.deadline ? Timestamp.fromDate(values.deadline) : undefined,
+            };
         }
+
+        const walletsCollection = collection(db, 'wallets');
+        await addDoc(walletsCollection, {
+            ...walletData,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        toast({
+            title: "Wallet Created!",
+            description: `Your new ${activeTab} wallet "${values.name}" has been created.`,
+        });
+
+        setOpen(false);
+        budgetForm.reset();
+        goalForm.reset();
+
+    } catch (error) {
+        console.error("Error creating wallet: ", error);
+        toast({
+            variant: "destructive",
+            title: "Creation Failed",
+            description: "There was an error creating your wallet. Please try again."
+        });
     }
-    setOpen(false); // Close dialog on success
-    // Reset forms after submission
-    budgetForm.reset();
-    goalForm.reset();
   };
-
-  const totalBudget = budgetForm.watch("totalBudget");
-  const frequency = budgetForm.watch("frequency");
-  const allocationAmount = useMemo(() => {
-    if (!totalBudget) return 0;
-    switch (frequency) {
-        case 'daily': return totalBudget / 30;
-        case 'weekly': return totalBudget / 4;
-        case 'bi-weekly': return totalBudget / 2;
-        case 'monthly': return totalBudget;
-        default: return 0;
-    }
-  }, [totalBudget, frequency]);
-  
-  const disbursementFrequency = budgetForm.watch("disbursementFrequency");
-
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -155,10 +161,10 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
               <form onSubmit={budgetForm.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={budgetForm.control}
-                  name="walletName"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Wallet Name</FormLabel>
+                      <FormLabel>Budget Name</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g., Weekly Groceries" {...field} />
                       </FormControl>
@@ -168,10 +174,10 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                 />
                  <FormField
                   control={budgetForm.control}
-                  name="totalBudget"
+                  name="limit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Budget Amount</FormLabel>
+                      <FormLabel>Budget Limit</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="$200" {...field} />
                       </FormControl>
@@ -184,7 +190,7 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                     name="frequency"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Frequency of Allocation</FormLabel>
+                        <FormLabel>Budget Frequency</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                             <SelectTrigger>
@@ -194,7 +200,6 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                             <SelectContent>
                             <SelectItem value="daily">Daily</SelectItem>
                             <SelectItem value="weekly">Weekly</SelectItem>
-                            <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
                             <SelectItem value="monthly">Monthly</SelectItem>
                             </SelectContent>
                         </Select>
@@ -202,197 +207,35 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                         </FormItem>
                     )}
                 />
-
-                <div className="text-sm">
-                    <p className="text-muted-foreground">Amount per Allocation</p>
-                    <p className="font-medium">~{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(allocationAmount)} / {frequency.replace('-', ' ')}</p>
-                </div>
-
-                <Card className="bg-muted/50">
-                    <CardContent className="p-4 space-y-4">
-                        <FormField
-                            control={budgetForm.control}
-                            name="lock"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg">
-                                <div className="space-y-0.5">
-                                    <FormLabel className="text-base">
-                                    Lock Wallet
-                                    </FormLabel>
-                                    <FormDescription>
-                                        Lock funds for a set period.
-                                    </FormDescription>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                </FormItem>
-                            )}
-                        />
-                        {budgetForm.watch("lock") && (
-                             <FormField
-                                control={budgetForm.control}
-                                name="lockDuration"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Lock Duration (in days)</FormLabel>
-                                    <FormControl>
-                                      <Input type="number" placeholder="e.g., 30" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
+                
+                <FormField
+                    control={budgetForm.control}
+                    name="status"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <FormLabel className="text-base">
+                            Lock Wallet on Creation
+                            </FormLabel>
+                            <FormDescription>
+                                You can unlock it later from wallet settings.
+                            </FormDescription>
+                        </div>
+                        <FormControl>
+                            <Switch
+                            checked={field.value === 'locked'}
+                            onCheckedChange={(checked) => field.onChange(checked ? 'locked' : 'open')}
                             />
-                        )}
-                    </CardContent>
-                </Card>
+                        </FormControl>
+                        </FormItem>
+                    )}
+                />
 
-                 <Collapsible>
-                    <CollapsibleTrigger asChild>
-                        <Button variant="link" className="p-0">
-                            Advanced Settings <Icons.chevronDown className="ml-2 h-4 w-4" />
-                        </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-4 mt-2">
-                       <Card className="bg-muted/50">
-                            <CardContent className="p-4 space-y-4">
-                                <FormField
-                                    control={budgetForm.control}
-                                    name="carryOver"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-row items-center justify-between rounded-lg">
-                                        <div className="space-y-0.5">
-                                            <FormLabel>Carry-over</FormLabel>
-                                            <FormDescription>
-                                                Roll over unspent funds.
-                                            </FormDescription>
-                                        </div>
-                                        <FormControl>
-                                            <Switch
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                                <Separator />
-                                 <FormField
-                                    control={budgetForm.control}
-                                    name="autoDisburse"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-row items-center justify-between rounded-lg">
-                                        <div className="space-y-0.5">
-                                            <FormLabel>Auto-Disbursement</FormLabel>
-                                            <FormDescription>
-                                                Automatically send funds to your main wallet.
-                                            </FormDescription>
-                                        </div>
-                                        <FormControl>
-                                            <Switch
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                                {budgetForm.watch("autoDisburse") && (
-                                    <div className="space-y-4 pl-2 pt-2 border-l-2 ml-2">
-                                        <FormField
-                                            control={budgetForm.control}
-                                            name="disbursementAmount"
-                                            render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Disbursement Amount</FormLabel>
-                                                <FormControl>
-                                                <Input type="number" placeholder="$50" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={budgetForm.control}
-                                            name="disbursementFrequency"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                <FormLabel>Disbursement Frequency</FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a frequency" />
-                                                    </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                    <SelectItem value="daily">Daily</SelectItem>
-                                                    <SelectItem value="weekly">Weekly</SelectItem>
-                                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        {disbursementFrequency === 'weekly' && (
-                                              <FormField
-                                                control={budgetForm.control}
-                                                name="disbursementDay"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                    <FormLabel>Day of the Week</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                        <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a day" />
-                                                        </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            {weekDays.map(day => <SelectItem key={day} value={day.toLowerCase()}>{day}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        )}
-                                        {disbursementFrequency === 'monthly' && (
-                                             <FormField
-                                                control={budgetForm.control}
-                                                name="disbursementDay"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                    <FormLabel>Day of the Month</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                        <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a day" />
-                                                        </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            {monthDays.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        )}
-                                    </div>
-                                )}
-                            </CardContent>
-                       </Card>
-                    </CollapsibleContent>
-                 </Collapsible>
-
-                <DialogFooter className="px-6 pb-6 pt-0">
+                <DialogFooter className="pt-4">
                     <DialogClose asChild>
                         <Button type="button" variant="ghost">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit">Create Budget Wallet</Button>
+                    <Button type="submit">Create Budget</Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -402,7 +245,7 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
               <form onSubmit={goalForm.handleSubmit(onSubmit)} className="space-y-4">
                  <FormField
                   control={goalForm.control}
-                  name="goalName"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Goal Name</FormLabel>
@@ -415,7 +258,7 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                 />
                  <FormField
                   control={goalForm.control}
-                  name="targetAmount"
+                  name="goalAmount"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Target Amount</FormLabel>
@@ -431,7 +274,7 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                     name="deadline"
                     render={({ field }) => (
                         <FormItem className="flex flex-col">
-                        <FormLabel>Deadline / Goal Date</FormLabel>
+                        <FormLabel>Deadline (Optional)</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                             <FormControl>
@@ -468,42 +311,34 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                     )}
                  />
 
-                <Card className="bg-muted/50">
-                    <CardContent className="p-4 space-y-4">
-                         <div className="flex items-center justify-between">
-                            <FormLabel>Motivation</FormLabel>
-                            <Button variant="ghost" size="sm">
-                                <Icons.image className="mr-2 h-4 w-4" /> Add Image
-                            </Button>
+                <FormField
+                    control={goalForm.control}
+                    name="status"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <FormLabel className="text-base">
+                            Lock Wallet on Creation
+                            </FormLabel>
+                            <FormDescription>
+                                Lock until target is reached or deadline passes.
+                            </FormDescription>
                         </div>
-                        <FormField
-                            control={goalForm.control}
-                            name="lockUntilTarget"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg pt-4 border-t">
-                                <div className="space-y-0.5">
-                                    <FormLabel>Lock Period</FormLabel>
-                                    <FormDescription>
-                                        Lock until target is reached.
-                                    </FormDescription>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
+                        <FormControl>
+                            <Switch
+                            checked={field.value === 'locked'}
+                            onCheckedChange={(checked) => field.onChange(checked ? 'locked' : 'open')}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
+                />
 
-                 <DialogFooter className="px-6 pb-6 pt-0">
+                 <DialogFooter className="pt-4">
                     <DialogClose asChild>
                         <Button type="button" variant="ghost">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit">Create Goal Wallet</Button>
+                    <Button type="submit">Create Goal</Button>
                  </DialogFooter>
               </form>
             </Form>

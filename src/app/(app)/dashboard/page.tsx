@@ -6,13 +6,12 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, user as initialUser, walletActivities } from "@/lib/data";
+import { user as initialUser, mainBalance } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AnalyticsSection from "@/components/dashboard/analytics-section";
-import DashboardTabs from "@/components/dashboard/dashboard-tabs";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
@@ -188,8 +187,6 @@ export default function DashboardPage() {
       )}
       
       <Separator className="my-6" />
-
-      <DashboardTabs />
 
       <AnalyticsSection />
 

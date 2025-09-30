@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Wallet, budgets as initialBudgets, goals as initialGoals, wallets as initialWalletsData } from "@/lib/data";
+import { Wallet, Budget, Goal } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import TopGoals from "@/components/wallets/top-goals";
@@ -14,6 +14,9 @@ import YourBudget from "@/components/wallets/your-budget";
 import YourGoals from "@/components/wallets/your-goals";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import Link from 'next/link'
+import { auth, db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import type { User } from 'firebase/auth';
 
 const quickActions = [
   { label: "Add", icon: Icons['add-2'], isDialog: true },
@@ -23,18 +26,47 @@ const quickActions = [
 ];
 
 export default function WalletsPage() {
-  const [wallets, setWallets] = useState<Wallet[]>(initialWalletsData);
+  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setLoading(true);
+      const q = query(
+        collection(db, "wallets"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const walletsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Wallet[];
+        setWallets(walletsData);
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    } else {
+      setWallets([]);
+      setLoading(false);
+    }
+  }, [user]);
+
   const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balance, 0);
 
-  const handleAddWallet = (wallet: Omit<Wallet, 'id' | 'currency' | 'color'>) => {
-    const newWallet: Wallet = {
-      id: `w${wallets.length + 1}`,
-      currency: 'USD',
-      color: 'bg-gray-500', // Default color
-      ...wallet
-    };
-    setWallets([...wallets, newWallet]);
-  };
+  const budgetWallets = wallets.filter(w => w.type === 'budget') as Budget[];
+  const goalWallets = wallets.filter(w => w.type === 'goal') as Goal[];
 
   return (
     <div className="space-y-8">
@@ -44,7 +76,7 @@ export default function WalletsPage() {
 
       <Card className="bg-card/50">
         <CardContent className="pt-6 text-center">
-          <p className="text-sm text-muted-foreground">Total Balance</p>
+          <p className="text-sm text-muted-foreground">Total Wallets Balance</p>
           <div className="flex items-baseline justify-center gap-2">
             <p className="text-4xl font-bold tracking-tighter">
               {new Intl.NumberFormat("en-US", {
@@ -61,7 +93,6 @@ export default function WalletsPage() {
               <div key={action.label} className="flex flex-col items-center gap-2">
                  {action.isDialog ? (
                    <CreateWalletDialog 
-                      onWalletCreated={handleAddWallet}
                       trigger={
                          <Button
                             variant="outline"
@@ -90,9 +121,17 @@ export default function WalletsPage() {
         </CardContent>
       </Card>
       
-      <TopGoals />
-      <YourBudget />
-      <YourGoals />
+      {loading ? (
+        <div className="flex justify-center items-center h-40">
+            <Icons.logo className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        <>
+            <TopGoals goals={goalWallets} />
+            <YourBudget budgets={budgetWallets} />
+            <YourGoals goals={goalWallets} />
+        </>
+      )}
 
     </div>
   );
