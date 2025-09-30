@@ -20,7 +20,7 @@ import { user } from "@/lib/data";
 const navItems = [
   { href: "/dashboard", icon: Icons.home, label: "Dashboard" },
   { href: "/zcash", icon: Icons.wallet, label: "ZCash" },
-  { href: "/wallets", icon: Icons.wallet, label: "Wallets" },
+  { href: "/wallets", icon: Icons.logo, label: "Wallets" },
   { href: "/circles", icon: Icons.users, label: "Circles" },
   { href: "/transactions", icon: Icons.transactions, label: "History" },
 ];

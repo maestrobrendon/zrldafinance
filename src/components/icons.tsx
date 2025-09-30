@@ -45,6 +45,9 @@ import {
   Repeat,
   Leaf,
   Home,
+  UserCog,
+  Shield,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -224,4 +227,7 @@ export const Icons = {
   'recurring-payment': Repeat,
   download: ArrowDownLeft,
   home: Home,
+  'user-cog': UserCog,
+  shield: Shield,
+  'sliders-horizontal': SlidersHorizontal,
 };
