@@ -162,18 +162,20 @@ export default function WalletDetailPage() {
                     mainBalance={mainBalance.balance}
                     walletName={wallet.name}
                 />
-                <WithdrawFundsDialog 
-                    trigger={
-                        <div className="flex flex-col items-center gap-2 cursor-pointer">
-                            <Button variant="outline" size="icon" className="w-12 h-12 rounded-full bg-primary/10 border-primary/20 text-primary">
-                                <Icons.move className="h-5 w-5" />
-                            </Button>
-                            <span className="text-sm font-medium">Withdraw</span>
-                        </div>
-                    }
-                    walletBalance={wallet.balance}
-                    walletName={wallet.name}
-                />
+                {wallet.status !== 'locked' && (
+                    <WithdrawFundsDialog 
+                        trigger={
+                            <div className="flex flex-col items-center gap-2 cursor-pointer">
+                                <Button variant="outline" size="icon" className="w-12 h-12 rounded-full bg-primary/10 border-primary/20 text-primary">
+                                    <Icons.move className="h-5 w-5" />
+                                </Button>
+                                <span className="text-sm font-medium">Withdraw</span>
+                            </div>
+                        }
+                        walletBalance={wallet.balance}
+                        walletName={wallet.name}
+                    />
+                )}
                 <div className="flex flex-col items-center gap-2">
                      <Button variant="outline" size="icon" className="w-12 h-12 rounded-full bg-primary/10 border-primary/20 text-primary">
                         <Icons.more className="h-6 w-6" />
@@ -301,3 +303,5 @@ export default function WalletDetailPage() {
     </div>
   );
 }
+
+    
