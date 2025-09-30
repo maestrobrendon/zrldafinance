@@ -21,7 +21,7 @@ export type Transaction = {
   amount: number;
   type: 'income' | 'expense' | 'contribution' | 'payment' | 'transfer';
   status: 'completed' | 'pending' | 'failed';
-  timestamp: Date;
+  timestamp: Date | Timestamp;
   date: string; // ISO string for client-side rendering
   description: string;
   from?: string;
@@ -38,14 +38,24 @@ export type Wallet = {
   name: string;
   balance: number;
   status: 'open' | 'locked';
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | Timestamp;
+  updatedAt: Date | Timestamp;
+  
   // Goal-specific fields
   goalAmount?: number;
   deadline?: Date | Timestamp;
+  
   // Budget-specific fields
   limit?: number; // The budget amount
-  frequency?: 'daily' | 'weekly' | 'monthly';
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'bi-weekly';
+  spendLimit?: number;
+  isLocked?: boolean;
+  lockDuration?: number; // in days
+  disbursementFrequency?: 'daily' | 'weekly' | 'monthly';
+  automaticAllocation?: boolean;
+  allocationFrequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly';
+  rollover?: boolean;
+  customNotifications?: boolean;
 };
 
 
