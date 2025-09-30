@@ -131,19 +131,17 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     }
 
     try {
-        let walletData: Partial<Wallet> = {
-            userId: user.uid,
-            balance: 0,
-            type: activeTab,
-            name: values.name,
-            status: 'open',
-        };
+        let walletData: Partial<Wallet>;
 
         if (activeTab === 'budget') {
             walletData = {
-                ...walletData,
+                userId: user.uid,
+                type: 'budget',
+                name: values.name,
+                balance: values.limit, // Set initial balance to the limit for budgets
                 limit: values.limit,
                 spendLimit: values.spendLimit,
+                status: values.isLocked ? 'locked' : 'open',
                 isLocked: values.isLocked,
                 lockDuration: values.isLocked ? values.lockDuration : undefined,
                 disbursementFrequency: values.isLocked ? values.disbursementFrequency : undefined,
@@ -156,12 +154,13 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                 rollover: values.rollover,
                 customNotifications: values.customNotifications,
             };
-             if (values.isLocked) {
-                walletData.status = 'locked';
-            }
         } else { // goal
             walletData = {
-                ...walletData,
+                userId: user.uid,
+                balance: 0, // Goals start with 0 balance
+                type: 'goal',
+                name: values.name,
+                status: 'open',
                 goalAmount: values.goalAmount,
                 deadline: values.deadline ? Timestamp.fromDate(values.deadline) : undefined,
                 fundingSource: values.fundingSource,
@@ -172,7 +171,7 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                 smartReminders: values.smartReminders,
                 flexContributions: values.flexContributions,
             };
-            if (values.lockOption) { // Simplified locking logic for goals
+            if (values.lockOption) { 
                 walletData.status = 'locked';
             }
         }
@@ -677,5 +676,7 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     </Dialog>
   );
 }
+
+    
 
     
