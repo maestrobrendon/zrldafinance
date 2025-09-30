@@ -41,6 +41,9 @@ import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet } from "@/lib/data";
+import { categories } from "@/lib/data";
+import { Checkbox } from "../ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
 type WalletType = "budget" | "goal";
 
@@ -49,13 +52,15 @@ const budgetWalletSchema = z.object({
   limit: z.coerce.number().positive("Amount must be positive."),
   frequency: z.enum(["daily", "weekly", "monthly"]),
   status: z.enum(["open", "locked"]).default("open"),
+  categories: z.array(z.string()).optional(),
+  rollover: z.boolean().default(false),
 });
 
 const goalWalletSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   goalAmount: z.coerce.number().positive("Amount must be positive."),
   deadline: z.date().optional(),
-  status: z.enum(["open", "locked"]).default("locked"),
+  lockOption: z.enum(["locked", "open"]).default("locked"),
 });
 
 type CreateWalletDialogProps = {
@@ -73,6 +78,8 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
       name: "",
       frequency: "monthly",
       status: "open",
+      categories: [],
+      rollover: false,
     },
   });
 
@@ -80,7 +87,7 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     resolver: zodResolver(goalWalletSchema),
     defaultValues: {
       name: "",
-      status: "locked",
+      lockOption: "locked",
     },
   });
 
@@ -97,7 +104,7 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
             balance: 0,
             type: activeTab,
             name: values.name,
-            status: values.status,
+            status: values.status || values.lockOption,
         };
 
         if (activeTab === 'budget') {
@@ -105,6 +112,8 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                 ...walletData,
                 limit: values.limit,
                 frequency: values.frequency,
+                // categories: values.categories, // Add to your Wallet type if needed
+                // rollover: values.rollover, // Add to your Wallet type if needed
             };
         } else { // goal
             walletData = {
@@ -208,28 +217,90 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                     )}
                 />
                 
-                <FormField
-                    control={budgetForm.control}
-                    name="status"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                            Lock Wallet on Creation
-                            </FormLabel>
-                            <FormDescription>
-                                You can unlock it later from wallet settings.
-                            </FormDescription>
-                        </div>
-                        <FormControl>
-                            <Switch
-                            checked={field.value === 'locked'}
-                            onCheckedChange={(checked) => field.onChange(checked ? 'locked' : 'open')}
-                            />
-                        </FormControl>
-                        </FormItem>
-                    )}
-                />
+                 <Collapsible>
+                    <CollapsibleTrigger asChild>
+                        <Button variant="link" className="p-0 text-primary">
+                            <Icons.settings className="mr-2 h-4 w-4" />
+                            Advanced Options
+                            <Icons.chevronDown className="ml-1 h-4 w-4" />
+                        </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-6 pt-4 animate-in fade-in-0">
+                         <FormField
+                            control={budgetForm.control}
+                            name="categories"
+                            render={() => (
+                                <FormItem>
+                                    <div className="mb-4">
+                                        <FormLabel className="text-base">Tracked Categories</FormLabel>
+                                        <FormDescription>
+                                        Select which spending categories will count towards this budget.
+                                        </FormDescription>
+                                    </div>
+                                    <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
+                                        {categories.map((category) => (
+                                        <FormField
+                                            key={category}
+                                            control={budgetForm.control}
+                                            name="categories"
+                                            render={({ field }) => {
+                                            return (
+                                                <FormItem
+                                                    key={category}
+                                                    className="flex flex-row items-center space-x-3 space-y-0"
+                                                >
+                                                    <FormControl>
+                                                        <Checkbox
+                                                            checked={field.value?.includes(category)}
+                                                            onCheckedChange={(checked) => {
+                                                                return checked
+                                                                ? field.onChange([...(field.value || []), category])
+                                                                : field.onChange(
+                                                                    field.value?.filter(
+                                                                        (value) => value !== category
+                                                                    )
+                                                                    )
+                                                            }}
+                                                        />
+                                                    </FormControl>
+                                                    <FormLabel className="font-normal">
+                                                        {category}
+                                                    </FormLabel>
+                                                </FormItem>
+                                            )
+                                            }}
+                                        />
+                                        ))}
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Separator />
+                        <FormField
+                            control={budgetForm.control}
+                            name="rollover"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="text-base">
+                                        Enable Rollover
+                                    </FormLabel>
+                                    <FormDescription>
+                                        Carry over unused funds to the next budget period.
+                                    </FormDescription>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                    </CollapsibleContent>
+                </Collapsible>
 
                 <DialogFooter className="pt-4">
                     <DialogClose asChild>
@@ -313,23 +384,38 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
 
                 <FormField
                     control={goalForm.control}
-                    name="status"
+                    name="lockOption"
                     render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                            Lock Wallet on Creation
-                            </FormLabel>
+                        <FormItem className="space-y-3">
+                            <FormLabel>Wallet Lock</FormLabel>
                             <FormDescription>
-                                Lock until target is reached or deadline passes.
+                                Control access to the funds in this wallet.
                             </FormDescription>
-                        </div>
-                        <FormControl>
-                            <Switch
-                            checked={field.value === 'locked'}
-                            onCheckedChange={(checked) => field.onChange(checked ? 'locked' : 'open')}
-                            />
-                        </FormControl>
+                            <FormControl>
+                                <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="space-y-2"
+                                >
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                    <RadioGroupItem value="locked" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                        Lock until goal is reached or deadline passes
+                                    </FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                    <RadioGroupItem value="open" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">
+                                        Keep wallet open for withdrawals
+                                    </FormLabel>
+                                </FormItem>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
                         </FormItem>
                     )}
                 />
