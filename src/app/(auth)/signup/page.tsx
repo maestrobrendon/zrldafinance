@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { defaultUser, mainBalance } from "@/lib/data";
+import { defaultUser, mainBalance, seedInitialTransactions } from "@/lib/data";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -52,9 +52,25 @@ export default function SignupPage() {
         photoURL: defaultUser.avatarUrl,
       });
 
+      // Seed initial transactions for the new user
+      await seedInitialTransactions(user.uid);
+
       router.push("/dashboard");
     } catch (error: any) {
-      setError(error.message);
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          setError('This email address is already in use by another account.');
+          break;
+        case 'auth/invalid-email':
+          setError('The email address is not valid.');
+          break;
+        case 'auth/weak-password':
+          setError('The password is too weak. It must be at least 6 characters long.');
+          break;
+        default:
+          setError('An unexpected error occurred. Please try again.');
+          break;
+      }
     } finally {
       setLoading(false);
     }
@@ -103,3 +119,5 @@ export default function SignupPage() {
     </>
   );
 }
+
+    

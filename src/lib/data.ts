@@ -1,5 +1,6 @@
 
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { Timestamp, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Icons } from '@/components/icons';
 
 // Main User Profile Schema
@@ -19,7 +20,8 @@ export type Transaction = {
   amount: number;
   type: 'income' | 'expense' | 'contribution' | 'payment' | 'transfer';
   status: 'completed' | 'pending' | 'failed';
-  timestamp: Date;
+  timestamp: Timestamp; // Use Firestore Timestamp
+  date: string; // Keep ISO string for client-side rendering
   description: string;
   from?: string;
   to?: string;
@@ -105,6 +107,25 @@ export type Goal = {
 export const defaultUser: Omit<UserProfile, 'userId' | 'email' | 'balance' | 'KYC_status'> = {
   name: 'Alex Doe',
   avatarUrl: 'https://picsum.photos/seed/1/100/100',
+};
+
+// Seed initial transactions for a new user
+export const seedInitialTransactions = async (userId: string) => {
+    const transactionsRef = collection(db, 'transactions');
+    const initialTransactions: Omit<Transaction, 'transactionId' | 'userId' | 'date' | 'timestamp'>[] = [
+        { description: 'Netflix Subscription', amount: 15.99, category: 'Entertainment', type: 'expense', status: 'completed' },
+        { description: 'Salary Deposit', amount: 3500.00, category: 'Income', type: 'income', status: 'completed' },
+        { description: 'Grocery Shopping', amount: 124.50, category: 'Groceries', type: 'expense', status: 'completed' },
+        { description: 'Starbucks Coffee', amount: 5.75, category: 'Restaurants', type: 'expense', status: 'completed' },
+        { description: 'Electricity Bill', amount: 75.00, category: 'Utilities', type: 'expense', status: 'pending' },
+    ];
+    for (const trans of initialTransactions) {
+        await addDoc(transactionsRef, {
+            ...trans,
+            userId: userId,
+            timestamp: serverTimestamp(),
+        });
+    }
 };
 
 
@@ -290,3 +311,5 @@ export const circles: Circle[] = [
     ]
   },
 ];
+
+    

@@ -6,7 +6,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, user as initialUser, transactions, walletActivities } from "@/lib/data";
+import { mainBalance, user as initialUser, walletActivities } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
@@ -16,8 +16,10 @@ import DashboardTabs from "@/components/dashboard/dashboard-tabs";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
 import type { User } from 'firebase/auth';
+import type { Transaction } from "@/lib/data";
 
 const quickActions = [
     { label: "Send To", icon: Icons['send-2'], href: "/send" },
@@ -42,16 +44,44 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
 export default function DashboardPage() {
   const [showBanner, setShowBanner] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
         setUser(firebaseUser);
+        if (!firebaseUser) {
+            setLoading(false);
+        }
     });
-    return () => unsubscribe();
-  }, []);
 
-  const combinedActivity = [...transactions, ...walletActivities]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (user) {
+        const q = query(
+            collection(db, "transactions"),
+            where("userId", "==", user.uid),
+            orderBy("timestamp", "desc"),
+            limit(4)
+        );
+
+        const unsubscribeTransactions = onSnapshot(q, (snapshot) => {
+            const transactionsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                date: doc.data().timestamp.toDate().toISOString(),
+            })) as unknown as Transaction[];
+            setRecentTransactions(transactionsData);
+            setLoading(false);
+        });
+
+        return () => {
+            unsubscribeAuth();
+            unsubscribeTransactions();
+        }
+    }
+
+
+    return () => unsubscribeAuth();
+  }, [user]);
 
   const displayName = user?.displayName || initialUser.name;
   const photoURL = user?.photoURL || initialUser.avatarUrl;
@@ -171,41 +201,47 @@ export default function DashboardPage() {
         </div>
         <Card className="bg-card/50">
           <CardContent className="pt-6 space-y-4">
-            {combinedActivity.slice(0, 4).map((activity, index) => {
-               const Icon = categoryIcons[activity.category] || Icons.grid;
-               const isTransaction = 'amount' in activity;
-
-               return (
-                <div key={activity.id}>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-primary/20 text-primary p-3 rounded-lg">
-                                <Icon className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <p className="font-medium">{activity.description}</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {format(new Date(activity.date), 'MMM d, yyyy')}
-                                </p>
-                            </div>
-                        </div>
-                        {isTransaction && (
-                          <p className={`font-medium ${activity.type === 'income' ? 'text-green-500' : ''}`}>
-                            {activity.type === 'income' ? '+' : '-'}
-                            {new Intl.NumberFormat("en-US", {
-                                style: "currency",
-                                currency: "USD",
-                            }).format(activity.amount)}
-                          </p>
-                        )}
-                    </div>
-                    {index < combinedActivity.slice(0, 4).length - 1 && <Separator className="mt-4 bg-border/50" />}
+            {loading ? (
+                <div className="flex justify-center items-center h-24">
+                    <Icons.logo className="h-6 w-6 animate-spin" />
                 </div>
-               )
-            })}
+            ) : recentTransactions.length > 0 ? (
+              recentTransactions.map((activity, index) => {
+                 const Icon = categoryIcons[activity.category] || Icons.grid;
+                 return (
+                  <div key={activity.transactionId}>
+                      <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                              <div className="bg-primary/20 text-primary p-3 rounded-lg">
+                                  <Icon className="h-5 w-5" />
+                              </div>
+                              <div>
+                                  <p className="font-medium">{activity.description}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                      {format(new Date(activity.date), 'MMM d, yyyy')}
+                                  </p>
+                              </div>
+                          </div>
+                          <p className={`font-medium ${activity.type === 'income' ? 'text-green-500' : ''}`}>
+                              {activity.type === 'income' ? '+' : '-'}
+                              {new Intl.NumberFormat("en-US", {
+                                  style: "currency",
+                                  currency: "USD",
+                              }).format(activity.amount)}
+                          </p>
+                      </div>
+                      {index < recentTransactions.length - 1 && <Separator className="mt-4 bg-border/50" />}
+                  </div>
+                 )
+              })
+            ) : (
+                <p className="text-muted-foreground text-center">No recent transactions found.</p>
+            )}
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
+
+    

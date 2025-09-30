@@ -1,8 +1,44 @@
+
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { auth } from "@/lib/firebase";
 import AppSidebar from "@/components/layout/app-sidebar";
 import BottomNavbar from "@/components/layout/bottom-navbar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Icons } from "@/components/icons";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        // Allow access to signup/login while preventing redirect loops
+        if (pathname !== "/login" && pathname !== "/signup") {
+          router.push("/login");
+        } else {
+            setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router, pathname]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Icons.logo className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen w-full">
@@ -17,3 +53,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    
