@@ -63,62 +63,68 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Only fetch data if a user is logged in.
-    if (user) {
-        setLoading(true);
+    if (!user) return; // Exit if there's no user.
 
-        // Real-time listener for recent transactions, limited to 4.
-        const transactionsQuery = query(
-            collection(db, "transactions"),
-            where("userId", "==", user.uid),
-            orderBy("timestamp", "desc"),
-            limit(4)
-        );
+    setLoading(true);
 
-        const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-            const transactionsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                // Convert Firestore Timestamp to ISO string for consistency.
-                date: doc.data().timestamp.toDate().toISOString(),
-            })) as unknown as Transaction[];
-            setRecentTransactions(transactionsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching recent transactions:", error);
-            // Handle specific errors like permission denied.
-            if (error.code === 'permission-denied') {
-                console.error("Firestore security rules are blocking the query.");
-            }
-            setLoading(false);
-        });
+    // Query for recent transactions for the logged-in user.
+    // We only filter by userId and limit the results for performance.
+    // Sorting will be handled on the client-side to avoid needing a composite index.
+    const transactionsQuery = query(
+        collection(db, "transactions"),
+        where("userId", "==", user.uid),
+        limit(10) // Fetch 10 to have enough data for client-side sorting/filtering.
+    );
 
-        // Real-time listener for user's wallets.
-        const walletsQuery = query(
-            collection(db, "wallets"),
-            where("userId", "==", user.uid)
-        );
+    // Set up the real-time listener.
+    const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+        const transactionsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            date: doc.data().timestamp.toDate().toISOString(),
+        })) as unknown as Transaction[];
+        
+        // Sort transactions by date descending on the client-side and take the first 4.
+        const sortedAndLimited = transactionsData
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 4);
 
-        const unsubscribeWallets = onSnapshot(walletsQuery, (snapshot) => {
-            const walletsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as Wallet[];
-            setWallets(walletsData);
-        }, (error) => {
-            console.error("Error fetching wallets:", error);
-             if (error.code === 'permission-denied') {
-                console.error("Firestore security rules are blocking the query.");
-            }
-        });
-
-        // Cleanup function to unsubscribe from listeners when the component unmounts.
-        return () => {
-            unsubscribeTransactions();
-            unsubscribeWallets();
+        setRecentTransactions(sortedAndLimited);
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching recent transactions:", error);
+        if (error.code === 'permission-denied') {
+            console.error("Firestore security rules are blocking the query. Ensure rules allow this query.");
         }
-    }
-  }, [user]);
+        setLoading(false);
+    });
+
+    // Set up the real-time listener for user's wallets.
+    const walletsQuery = query(
+        collection(db, "wallets"),
+        where("userId", "==", user.uid)
+    );
+
+    const unsubscribeWallets = onSnapshot(walletsQuery, (snapshot) => {
+        const walletsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })) as Wallet[];
+        setWallets(walletsData);
+    }, (error) => {
+        console.error("Error fetching wallets:", error);
+         if (error.code === 'permission-denied') {
+            console.error("Firestore security rules are blocking the query.");
+        }
+    });
+
+    // Return the cleanup function to unsubscribe from listeners on component unmount.
+    return () => {
+        unsubscribeTransactions();
+        unsubscribeWallets();
+    };
+}, [user]);
+
 
   const displayName = user?.displayName || "User";
   const photoURL = user?.photoURL || "";
@@ -277,4 +283,5 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
+
+    
