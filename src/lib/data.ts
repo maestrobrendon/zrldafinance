@@ -52,8 +52,12 @@ export type Wallet = {
   isLocked?: boolean;
   lockDuration?: number; // in days
   disbursementFrequency?: 'daily' | 'weekly' | 'monthly';
+  disbursementDayOfWeek?: string;
+  disbursementDayOfMonth?: number;
   automaticAllocation?: boolean;
   allocationFrequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly';
+  allocationDayOfWeek?: string;
+  allocationDayOfMonth?: number;
   rollover?: boolean;
   customNotifications?: boolean;
 };
@@ -286,3 +290,5 @@ export const seedInitialData = async (userId: string) => {
 
     await batch.commit();
 };
+
+    

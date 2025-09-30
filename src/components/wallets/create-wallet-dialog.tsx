@@ -40,9 +40,12 @@ import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firesto
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet } from "@/lib/data";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Label } from "../ui/label";
+import { Label } from "@/components/ui/label";
 
 type WalletType = "budget" | "goal";
+
+const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const daysOfMonth = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
 
 const budgetWalletSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -53,10 +56,14 @@ const budgetWalletSchema = z.object({
   isLocked: z.boolean().default(false),
   lockDuration: z.coerce.number().optional(),
   disbursementFrequency: z.enum(["daily", "weekly", "monthly"]).optional(),
+  disbursementDayOfWeek: z.string().optional(),
+  disbursementDayOfMonth: z.coerce.number().optional(),
 
   // Advanced
   automaticAllocation: z.boolean().default(false),
   allocationFrequency: z.enum(["daily", "weekly", "bi-weekly", "monthly"]).optional(),
+  allocationDayOfWeek: z.string().optional(),
+  allocationDayOfMonth: z.coerce.number().optional(),
   rollover: z.boolean().default(false),
   customNotifications: z.boolean().default(false),
 });
@@ -106,7 +113,9 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
   });
 
   const isBudgetWalletLocked = budgetForm.watch("isLocked");
+  const disbursementFrequency = budgetForm.watch("disbursementFrequency");
   const isAutoAllocationEnabled = budgetForm.watch("automaticAllocation");
+  const allocationFrequency = budgetForm.watch("allocationFrequency");
 
 
    const onSubmit = async (values: any) => {
@@ -133,8 +142,12 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                 isLocked: values.isLocked,
                 lockDuration: values.isLocked ? values.lockDuration : undefined,
                 disbursementFrequency: values.isLocked ? values.disbursementFrequency : undefined,
+                disbursementDayOfWeek: values.isLocked && values.disbursementFrequency === 'weekly' ? values.disbursementDayOfWeek : undefined,
+                disbursementDayOfMonth: values.isLocked && values.disbursementFrequency === 'monthly' ? values.disbursementDayOfMonth : undefined,
                 automaticAllocation: values.automaticAllocation,
                 allocationFrequency: values.automaticAllocation ? values.allocationFrequency : undefined,
+                allocationDayOfWeek: values.automaticAllocation && (values.allocationFrequency === 'weekly' || values.allocationFrequency === 'bi-weekly') ? values.allocationDayOfWeek : undefined,
+                allocationDayOfMonth: values.automaticAllocation && values.allocationFrequency === 'monthly' ? values.allocationDayOfMonth : undefined,
                 rollover: values.rollover,
                 customNotifications: values.customNotifications,
             };
@@ -288,11 +301,54 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                                         <SelectItem value="monthly">Monthly</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <FormDescription>When should funds be moved to your main balance?</FormDescription>
                                 <FormMessage />
                                 </FormItem>
                             )}
                         />
+                        {disbursementFrequency === 'weekly' && (
+                            <FormField
+                                control={budgetForm.control}
+                                name="disbursementDayOfWeek"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Day of the Week</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a day" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {daysOfWeek.map(day => <SelectItem key={day} value={day.toLowerCase()}>{day}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                         {disbursementFrequency === 'monthly' && (
+                            <FormField
+                                control={budgetForm.control}
+                                name="disbursementDayOfMonth"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Day of the Month</FormLabel>
+                                    <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a date" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {daysOfMonth.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
                     </div>
                 )}
                 
@@ -346,6 +402,50 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                                         </FormItem>
                                     )}
                                 />
+                                {(allocationFrequency === 'weekly' || allocationFrequency === 'bi-weekly') && (
+                                    <FormField
+                                        control={budgetForm.control}
+                                        name="allocationDayOfWeek"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Day of the Week</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a day" />
+                                                </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {daysOfWeek.map(day => <SelectItem key={day} value={day.toLowerCase()}>{day}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+                                {allocationFrequency === 'monthly' && (
+                                    <FormField
+                                        control={budgetForm.control}
+                                        name="allocationDayOfMonth"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Day of the Month</FormLabel>
+                                            <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
+                                                <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a date" />
+                                                </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {daysOfMonth.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
                              </div>
                         )}
 
@@ -559,3 +659,5 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     </Dialog>
   );
 }
+
+    
