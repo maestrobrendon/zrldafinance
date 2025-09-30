@@ -19,6 +19,8 @@ const settingsItems = [
   { href: "/settings/security", icon: Icons.shield, label: "Security", description: "PIN, biometrics, 2FA, and more." },
   { href: "/settings/preferences", icon: Icons['sliders-horizontal'], label: "Preferences", description: "Currency, language, and appearance." },
   { href: "/settings/notifications", icon: Icons.notification, label: "Notifications", description: "Email, SMS, and push notifications." },
+  { href: "/transactions", icon: Icons.history, label: "Transaction History", description: "View your spending and activity." },
+  { href: "/settings/general", icon: Icons.settings, label: "General", description: "Privacy, data, and app settings." },
 ];
 
 export default function SettingsPage() {
