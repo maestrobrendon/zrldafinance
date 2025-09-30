@@ -2,47 +2,28 @@
 "use client";
 
 import * as React from "react";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type Wallet, type Budget, type Goal } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import TopGoals from "@/components/wallets/top-goals";
 import YourBudget from "@/components/wallets/your-budget";
 import YourGoals from "@/components/wallets/your-goals";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
-import Link from 'next/link';
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy, doc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
 
-const quickActions = [
-  { label: "Add", icon: Icons['add-2'], isDialog: true },
-  { label: "Send", icon: Icons['send-2'], href: '/send' },
-  { label: "Move", icon: Icons.move, href: '/move' },
-  { label: "Withdraw", icon: Icons.withdraw, href: '/withdraw' },
-];
 
 export default function WalletsPage() {
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
-  const [mainBalance, setMainBalance] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   
   React.useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
-        // Listener for the main balance from the user's document
-        const userDocRef = doc(db, "users", user.uid);
-        const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-            if (doc.exists()) {
-                setMainBalance(doc.data().balance || 0);
-            }
-        });
-
-        // Listener for the wallets
         const q = query(
             collection(db, "wallets"), 
             where("userId", "==", user.uid),
@@ -55,7 +36,6 @@ export default function WalletsPage() {
                 userWallets.push({
                     id: doc.id,
                     ...data,
-                     // Convert Firestore Timestamps to JS Date objects
                     createdAt: data.createdAt?.toDate(),
                     updatedAt: data.updatedAt?.toDate(),
                     deadline: data.deadline?.toDate(),
@@ -70,12 +50,10 @@ export default function WalletsPage() {
         });
 
         return () => {
-            unsubscribeUser();
             unsubscribeWallets();
         };
       } else {
         setWallets([]);
-        setMainBalance(0);
         setLoading(false);
       }
     });
@@ -89,20 +67,15 @@ export default function WalletsPage() {
   if (loading) {
     return (
         <div className="space-y-8">
-            <Skeleton className="h-8 w-48 mx-auto" />
-            <Skeleton className="h-48 w-full" />
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-32" />
-                <div className="flex gap-4">
-                    <Skeleton className="h-32 flex-1" />
-                    <Skeleton className="h-32 flex-1" />
-                    <Skeleton className="h-32 flex-1" />
-                </div>
+            <div className="flex justify-between items-center">
+                <Skeleton className="h-9 w-24" />
+                 <Skeleton className="h-10 w-10 rounded-full" />
             </div>
-             <div className="space-y-4">
-                <Skeleton className="h-8 w-32" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <div className="space-y-4">
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-40 w-full" />
             </div>
         </div>
     )
@@ -118,60 +91,37 @@ export default function WalletsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-center">My Wallet</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">My Wallet</h1>
+         <CreateWalletDialog 
+            trigger={
+                <Button variant="outline" size="icon" className="rounded-full">
+                    <Icons.add className="h-5 w-5" />
+                </Button>
+            }
+         />
       </div>
 
-      <Card className="bg-card/50">
-        <CardContent className="pt-6 text-center">
-          <p className="text-sm text-muted-foreground">Main Balance</p>
-          <div className="flex items-baseline justify-center gap-2">
-            <p className="text-4xl font-bold tracking-tighter">
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-              }).format(mainBalance)}
-            </p>
-            <p className="text-lg font-semibold text-muted-foreground">
-              USD
-            </p>
-          </div>
-          <div className="mt-6 grid grid-cols-4 gap-4">
-            {quickActions.map((action) => (
-              <div key={action.label} className="flex flex-col items-center gap-2">
-                 {action.isDialog ? (
-                   <CreateWalletDialog 
-                      trigger={
-                         <Button
-                            variant="outline"
-                            size="icon"
-                            className="w-16 h-16 rounded-full bg-background/50 border-primary/50 hover:bg-primary/10"
-                          >
-                            <action.icon className="h-6 w-6 text-primary" />
-                          </Button>
-                      }
-                   />
-                 ) : (
-                   <Link href={action.href || '#'}>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="w-16 h-16 rounded-full bg-background/50 border-primary/50 hover:bg-primary/10"
-                    >
-                      <action.icon className="h-6 w-6 text-primary" />
-                    </Button>
-                  </Link>
-                 )}
-                <span className="text-sm font-medium">{action.label}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <TopGoals goals={goals} />
-      <YourBudget budgets={budgets} />
-      <YourGoals goals={goals} />
+      <Tabs defaultValue="budget" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-card/50">
+          <TabsTrigger value="budget">Budget</TabsTrigger>
+          <TabsTrigger value="goals">Goals</TabsTrigger>
+          <TabsTrigger value="circles">Circles</TabsTrigger>
+        </TabsList>
+        <TabsContent value="budget" className="mt-6">
+          <YourBudget budgets={budgets} />
+        </TabsContent>
+        <TabsContent value="goals" className="mt-6">
+          <YourGoals goals={goals} />
+        </TabsContent>
+        <TabsContent value="circles" className="mt-6">
+            <Card className="bg-card/50">
+                <CardContent className="p-6 text-center">
+                    <p className="text-muted-foreground">Circles are coming soon!</p>
+                </CardContent>
+            </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
