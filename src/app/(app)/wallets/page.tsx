@@ -15,7 +15,7 @@ import YourGoals from "@/components/wallets/your-goals";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import Link from 'next/link';
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const quickActions = [
@@ -27,12 +27,22 @@ const quickActions = [
 
 export default function WalletsPage() {
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
+  const [mainBalance, setMainBalance] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   
   React.useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
+        // Listener for the main balance from the user's document
+        const userDocRef = doc(db, "users", user.uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+            if (doc.exists()) {
+                setMainBalance(doc.data().balance || 0);
+            }
+        });
+
+        // Listener for the wallets
         const q = query(
             collection(db, "wallets"), 
             where("userId", "==", user.uid),
@@ -58,9 +68,14 @@ export default function WalletsPage() {
             setError("Failed to load wallets. Please try again.");
             setLoading(false);
         });
-        return () => unsubscribeWallets();
+
+        return () => {
+            unsubscribeUser();
+            unsubscribeWallets();
+        };
       } else {
         setWallets([]);
+        setMainBalance(0);
         setLoading(false);
       }
     });
@@ -70,8 +85,7 @@ export default function WalletsPage() {
 
   const budgets = wallets.filter(w => w.type === 'budget') as Budget[];
   const goals = wallets.filter(w => w.type === 'goal') as Goal[];
-  const totalBalance = wallets.reduce((acc, wallet) => acc + wallet.balance, 0);
-
+  
   if (loading) {
     return (
         <div className="space-y-8">
@@ -110,13 +124,13 @@ export default function WalletsPage() {
 
       <Card className="bg-card/50">
         <CardContent className="pt-6 text-center">
-          <p className="text-sm text-muted-foreground">Total Wallets Balance</p>
+          <p className="text-sm text-muted-foreground">Main Balance</p>
           <div className="flex items-baseline justify-center gap-2">
             <p className="text-4xl font-bold tracking-tighter">
               {new Intl.NumberFormat("en-US", {
                 style: "currency",
                 currency: "USD",
-              }).format(totalBalance)}
+              }).format(mainBalance)}
             </p>
             <p className="text-lg font-semibold text-muted-foreground">
               USD

@@ -6,7 +6,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, type Transaction, type Wallet } from "@/lib/data";
+import { type Transaction, type Wallet } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import { auth, db } from "@/lib/firebase";
 import type { User } from 'firebase/auth';
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where, doc, orderBy, limit } from "firebase/firestore";
 
 const quickActions = [
     { label: "Send To", icon: Icons['send-2'], href: "/send" },
@@ -38,69 +38,28 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
   Wallet: Icons.wallet,
 };
 
-const recentTransactions: Transaction[] = [
-    {
-        id: "1",
-        transactionId: 't1',
-        userId: 'u1',
-        amount: 15.99,
-        type: 'expense',
-        status: 'completed',
-        timestamp: new Date(),
-        date: "2024-07-29T10:00:00.000Z",
-        description: "Netflix",
-        category: "Entertainment",
-    },
-    {
-        id: "2",
-        transactionId: 't2',
-        userId: 'u1',
-        amount: 3500,
-        type: 'income',
-        status: 'completed',
-        timestamp: new Date(),
-        date: "2024-07-28T10:00:00.000Z",
-        description: "Salary",
-        category: "Income",
-    },
-    {
-        id: "3",
-        transactionId: 't3',
-        userId: 'u1',
-        amount: 124.50,
-        type: 'expense',
-        status: 'completed',
-        timestamp: new Date(),
-        date: "2024-07-27T10:00:00.000Z",
-        description: "Groceries",
-        category: "Groceries",
-    },
-     {
-        id: "4",
-        transactionId: 't4',
-        userId: 'u1',
-        amount: 5.75,
-        type: 'expense',
-        status: 'completed',
-        timestamp: new Date(),
-        date: "2024-07-26T10:00:00.000Z",
-        description: "Starbucks",
-        category: "Restaurants",
-    }
-];
-
-
 export default function DashboardPage() {
   const [showBanner, setShowBanner] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [mainBalance, setMainBalance] = useState(0);
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
         setUser(firebaseUser);
         if (firebaseUser) {
-            const q = query(collection(db, "wallets"), where("userId", "==", firebaseUser.uid));
-            const unsubscribeWallets = onSnapshot(q, (querySnapshot) => {
+            // Main balance listener
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+                if (doc.exists()) {
+                    setMainBalance(doc.data().balance || 0);
+                }
+            });
+
+            // Wallets listener
+            const walletsQuery = query(collection(db, "wallets"), where("userId", "==", firebaseUser.uid));
+            const unsubscribeWallets = onSnapshot(walletsQuery, (querySnapshot) => {
                 const userWallets: Wallet[] = [];
                 querySnapshot.forEach((doc) => {
                      const data = doc.data();
@@ -119,9 +78,42 @@ export default function DashboardPage() {
                     console.error("Firestore security rules are blocking the query.");
                 }
             });
-            return () => unsubscribeWallets();
+
+            // Transactions listener
+            const transactionsQuery = query(
+                collection(db, "transactions"), 
+                where("userId", "==", firebaseUser.uid), 
+                orderBy("timestamp", "desc"), 
+                limit(4)
+            );
+            const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+                const transactions: Transaction[] = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    transactions.push({
+                        id: doc.id,
+                        ...data,
+                        timestamp: data.timestamp.toDate(),
+                        date: data.timestamp.toDate().toISOString(),
+                    } as Transaction);
+                });
+                setRecentTransactions(transactions);
+            }, (error) => {
+                console.error("Error fetching transactions:", error);
+                 if (error.code === 'permission-denied') {
+                    console.error("Firestore security rules are blocking the transactions query.");
+                }
+            });
+
+            return () => {
+                unsubscribeUser();
+                unsubscribeWallets();
+                unsubscribeTransactions();
+            };
         } else {
             setWallets([]);
+            setMainBalance(0);
+            setRecentTransactions([]);
         }
     });
     
@@ -164,8 +156,8 @@ export default function DashboardPage() {
               <p className="text-4xl font-bold tracking-tighter">
                   {new Intl.NumberFormat("en-US", {
                   style: "currency",
-                  currency: mainBalance.currency,
-                  }).format(mainBalance.balance)}
+                  currency: "USD",
+                  }).format(mainBalance)}
               </p>
               </div>
           </CardContent>
@@ -282,7 +274,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
-
-    
