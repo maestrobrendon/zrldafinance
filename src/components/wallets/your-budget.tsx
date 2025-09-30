@@ -55,16 +55,16 @@ export default function YourBudget({ budgets }: YourBudgetProps) {
                             </Badge>
                         </div>
                         <Progress value={progress} className="h-2" />
-                        <div className="grid grid-cols-3 gap-2 text-center">
-                            <div>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="text-center">
                                 <p className="text-xs text-muted-foreground">Spent</p>
                                 <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(spent)}</p>
                             </div>
-                            <div>
+                            <div className="text-center">
                                 <p className="text-xs text-muted-foreground">Left to Spend</p>
                                 <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(balance)}</p>
                             </div>
-                            <div>
+                            <div className="text-center">
                                 <p className="text-xs text-muted-foreground">Limit</p>
                                 <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(limit)}</p>
                             </div>
