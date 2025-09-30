@@ -94,7 +94,10 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     resolver: zodResolver(budgetWalletSchema),
     defaultValues: {
       name: "",
+      limit: '' as any,
+      spendLimit: '' as any,
       isLocked: false,
+      lockDuration: '' as any,
       automaticAllocation: false,
       rollover: false,
       customNotifications: false,
