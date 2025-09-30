@@ -149,7 +149,7 @@ export default function WalletDetailPage() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-flow-col justify-center gap-6 text-center">
                 <AddFundsDialog 
                     trigger={
                         <div className="flex flex-col items-center gap-2 cursor-pointer">
@@ -303,5 +303,3 @@ export default function WalletDetailPage() {
     </div>
   );
 }
-
-    
