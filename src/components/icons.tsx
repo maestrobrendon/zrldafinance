@@ -89,85 +89,11 @@ export const Icons = {
   settings: Settings,
   more: MoreHorizontal,
   add: PlusCircle,
-  'add-2': (props: React.SVGProps<SVGSVGElement>) => (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      {...props}
-    >
-      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 13.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
-      <path d="M12 7.5V12h2.25" />
-    </svg>
-  ),
-  send: (props: React.SVGProps<SVGSVGElement>) => (
-     <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 13.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
-      <path d="M12 7.5V12h2.25" />
-    </svg>
-  ),
-  'send-2': (props: React.SVGProps<SVGSVGElement>) => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 13.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
-      <path d="M12 7.5V12h2.25" />
-    </svg>
-  ),
-  receive: (props: React.SVGProps<SVGSVGElement>) => (
-     <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm-3.5 10a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
-      <path d="M12 14.5V12H9.75" />
-    </svg>
-  ),
-  withdraw: (props: React.SVGProps<SVGSVGElement>) => (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 13.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
-      <path d="M12 7.5V12h2.25" />
-    </svg>
-  ),
+  'add-2': PlusCircle,
+  send: ArrowUpRight,
+  'send-2': ArrowUpRight,
+  receive: ArrowDownLeft,
+  withdraw: ArrowDownLeft,
   search: Search,
   notification: Bell,
   chevronDown: ChevronDown,
