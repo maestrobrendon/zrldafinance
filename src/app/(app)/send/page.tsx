@@ -12,14 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
-import { user, mainBalance, zcashBalance } from "@/lib/data";
+import { mainBalance } from "@/lib/data";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const zrldaFriends = [
-    { id: 'f1', name: 'Jane Doe', avatarUrl: 'https://picsum.photos/seed/2/100/100' },
-    { id: 'f2', name: 'John Smith', avatarUrl: 'https://picsum.photos/seed/3/100/100' },
-    { id: 'f3', name: 'Emily White', avatarUrl: 'https://picsum.photos/seed/4/100/100' },
+    { id: 'f1', name: 'Jane Doe', avatarUrl: 'https://picsum.photos/seed/2/100/100', handle: '@jane.doe' },
+    { id: 'f2', name: 'John Smith', avatarUrl: 'https://picsum.photos/seed/3/100/100', handle: '@john.smith' },
+    { id: 'f3', name: 'Emily White', avatarUrl: 'https://picsum.photos/seed/4/100/100', handle: '@emily.white' },
 ]
 
 const activeCircles = [
@@ -35,7 +35,20 @@ export default function SendPage() {
 
     const [activeTab, setActiveTab] = useState(isZcashFlow ? 'zrlda' : 'bank');
     
-    const balanceToShow = isZcashFlow ? zcashBalance.balance : mainBalance.balance;
+    // Form state
+    const [amount, setAmount] = useState('');
+    const [note, setNote] = useState('');
+    const [selectedFriend, setSelectedFriend] = useState<(typeof zrldaFriends)[0] | null>(null);
+    const [selectedCircle, setSelectedCircle] = useState<(typeof activeCircles)[0] | null>(null);
+
+    const zcashBalance = 10000; // Placeholder
+    const balanceToShow = isZcashFlow ? zcashBalance : mainBalance.balance;
+
+    const handleSelectFriend = (friend: (typeof zrldaFriends)[0]) => {
+        setSelectedFriend(friend);
+        setAmount('');
+        setNote('');
+    }
 
     const renderForm = () => (
         <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
@@ -70,11 +83,11 @@ export default function SendPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="amount">Amount</Label>
-                                <Input id="amount" type="number" placeholder="₦0.00" />
+                                <Input id="amount" type="number" placeholder="$0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="note">Note (Optional)</Label>
-                                <Input id="note" placeholder="What's this for?" />
+                                <Input id="note" placeholder="What's this for?" value={note} onChange={(e) => setNote(e.target.value)} />
                             </div>
                         </CardContent>
                     </Card>
@@ -86,33 +99,53 @@ export default function SendPage() {
                         <CardTitle>Send to Zrlda User</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                         <div className="relative">
-                            <Icons.search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Search by name or @username" className="pl-10" />
-                        </div>
-                        <p className="text-sm font-medium text-muted-foreground">Recents</p>
-                        <div className="space-y-3">
-                            {zrldaFriends.map(friend => (
-                                <div key={friend.id} className="flex items-center justify-between">
+                        {selectedFriend ? (
+                            <div className="space-y-4">
+                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
-                                            <AvatarImage src={friend.avatarUrl} alt={friend.name} />
-                                            <AvatarFallback>{friend.name.charAt(0)}</AvatarFallback>
+                                            <AvatarImage src={selectedFriend.avatarUrl} alt={selectedFriend.name} />
+                                            <AvatarFallback>{selectedFriend.name.charAt(0)}</AvatarFallback>
                                         </Avatar>
-                                        <p className="font-medium">{friend.name}</p>
+                                        <div>
+                                            <p className="font-medium">{selectedFriend.name}</p>
+                                            <p className="text-sm text-muted-foreground">{selectedFriend.handle}</p>
+                                        </div>
                                     </div>
-                                    <Button variant="ghost" size="sm">Select</Button>
+                                    <Button variant="link" onClick={() => setSelectedFriend(null)}>Change</Button>
                                 </div>
-                            ))}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="amount-zrlda">Amount</Label>
-                            <Input id="amount-zrlda" type="number" placeholder="₦0.00" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="note-zrlda">Note (Optional)</Label>
-                            <Input id="note-zrlda" placeholder="For the weekend!" />
-                        </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="amount-zrlda">Amount</Label>
+                                    <Input id="amount-zrlda" type="number" placeholder="$0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="note-zrlda">Note (Optional)</Label>
+                                    <Input id="note-zrlda" placeholder="For the weekend!" value={note} onChange={(e) => setNote(e.target.value)} />
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="relative">
+                                    <Icons.search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input placeholder="Search by name or @username" className="pl-10" />
+                                </div>
+                                <p className="text-sm font-medium text-muted-foreground">Recents</p>
+                                <div className="space-y-3">
+                                    {zrldaFriends.map(friend => (
+                                        <div key={friend.id} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar>
+                                                    <AvatarImage src={friend.avatarUrl} alt={friend.name} />
+                                                    <AvatarFallback>{friend.name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <p className="font-medium">{friend.name}</p>
+                                            </div>
+                                            <Button variant="ghost" size="sm" onClick={() => handleSelectFriend(friend)}>Select</Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
             </TabsContent>
@@ -125,7 +158,7 @@ export default function SendPage() {
                         <div className="space-y-2">
                             <Label>Select a Circle</Label>
                             {activeCircles.map(circle => (
-                                <Card key={circle.id} className="p-4 flex justify-between items-center">
+                                <Card key={circle.id} className={cn("p-4 flex justify-between items-center cursor-pointer", selectedCircle?.id === circle.id && 'border-primary')} onClick={() => setSelectedCircle(circle)}>
                                     <p className="font-medium">{circle.name}</p>
                                     <Icons.chevronRight className="h-4 w-4" />
                                 </Card>
@@ -133,12 +166,12 @@ export default function SendPage() {
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="amount-circle">Amount</Label>
-                            <Input id="amount-circle" type="number" placeholder="₦0.00" />
+                            <Input id="amount-circle" type="number" placeholder="$0.00" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={!selectedCircle} />
                         </div>
                     </CardContent>
                 </Card>
             </TabsContent>
-             <Button className="w-full mt-6" onClick={() => setStep('review')}>Review Transfer</Button>
+             <Button className="w-full mt-6" onClick={() => setStep('review')} disabled={!amount}>Review Transfer</Button>
         </Tabs>
     );
 
@@ -151,46 +184,37 @@ export default function SendPage() {
                 <CardContent className="space-y-4">
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">You are sending</span>
-                        <span className="text-2xl font-bold">₦10,000.00</span>
+                        <span className="text-2xl font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))}</span>
                     </div>
                      <Separator />
-                    {activeTab === 'bank' && (
-                         <div className="space-y-2">
-                            <p className="text-sm text-muted-foreground">To</p>
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                                    <Icons.wallet className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="font-medium">Jane Doe</p>
-                                    <p className="text-sm text-muted-foreground">GTBank - 0123456789</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === 'zrlda' && (
+                    {activeTab === 'zrlda' && selectedFriend && (
                          <div className="space-y-2">
                             <p className="text-sm text-muted-foreground">To</p>
                              <div className="flex items-center gap-3">
                                 <Avatar>
-                                    <AvatarImage src={zrldaFriends[0].avatarUrl} alt={zrldaFriends[0].name} />
-                                    <AvatarFallback>{zrldaFriends[0].name.charAt(0)}</AvatarFallback>
+                                    <AvatarImage src={selectedFriend.avatarUrl} alt={selectedFriend.name} />
+                                    <AvatarFallback>{selectedFriend.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="font-medium">{zrldaFriends[0].name}</p>
-                                    <p className="text-sm text-muted-foreground">@jane.doe</p>
+                                    <p className="font-medium">{selectedFriend.name}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedFriend.handle}</p>
                                 </div>
                             </div>
                         </div>
                     )}
-
+                    {note && (
+                        <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">Note</p>
+                            <p className="font-medium">{note}</p>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Fee</span>
-                        <span className="font-medium">₦25.00</span>
+                        <span className="font-medium">$0.00</span>
                     </div>
                     <div className="flex justify-between items-center font-bold text-lg">
                         <span>Total</span>
-                        <span>₦10,025.00</span>
+                        <span>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))}</span>
                     </div>
                 </CardContent>
             </Card>
@@ -208,17 +232,17 @@ export default function SendPage() {
             </div>
             <div>
                 <h2 className="text-2xl font-bold">Transfer Successful!</h2>
-                <p className="text-muted-foreground">You have successfully sent ₦10,000.00 to Jane Doe.</p>
+                <p className="text-muted-foreground">You have successfully sent {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))} to {selectedFriend?.name}.</p>
             </div>
             <Card className="w-full text-left">
                 <CardContent className="pt-6 space-y-4">
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Amount</span>
-                        <span className="font-medium">₦10,000.00</span>
+                        <span className="font-medium">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Recipient</span>
-                        <span className="font-medium">Jane Doe</span>
+                        <span className="font-medium">{selectedFriend?.name}</span>
                     </div>
                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Transaction ID</span>
@@ -257,5 +281,3 @@ export default function SendPage() {
         </div>
     );
 }
-
-    

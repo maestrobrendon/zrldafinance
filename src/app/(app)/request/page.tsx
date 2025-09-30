@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
-import { zcashBalance } from "@/lib/data";
 import Link from "next/link";
 
 const zrldaFriends = [
@@ -25,6 +24,7 @@ export default function RequestPage() {
     const [selectedFriend, setSelectedFriend] = useState<(typeof zrldaFriends)[0] | null>(null);
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
+    const [zcashBalance, setZcashBalance] = useState(10000); // Placeholder
 
     const handleSelectFriend = (friend: (typeof zrldaFriends)[0]) => {
         setSelectedFriend(friend);
@@ -176,7 +176,7 @@ export default function RequestPage() {
                     <p className="text-sm text-muted-foreground">
                         Your ZCash balance: {' '}
                         <span className="font-bold text-primary">
-                            {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(zcashBalance.balance)}
+                            {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(zcashBalance)}
                         </span>
                     </p>
                 </div>

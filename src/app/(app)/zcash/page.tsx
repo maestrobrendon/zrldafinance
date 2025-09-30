@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
-import { zcashBalance, type Transaction } from "@/lib/data";
+import { type Transaction } from "@/lib/data";
 import Link from "next/link";
 import { format } from "date-fns";
 import { auth, db } from "@/lib/firebase";
@@ -28,6 +29,7 @@ export default function ZCashPage() {
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [zcashBalance, setZcashBalance] = useState(10000); // Placeholder
   
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
@@ -46,6 +48,7 @@ export default function ZCashPage() {
             collection(db, "transactions"),
             where("userId", "==", user.uid),
             where("type", "!=", "income"),
+            orderBy("type"), 
             orderBy("timestamp", "desc"),
             limit(5)
         );
@@ -57,6 +60,9 @@ export default function ZCashPage() {
                 date: doc.data().timestamp.toDate().toISOString(),
             })) as unknown as Transaction[];
             setRecentTransactions(transactionsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching ZCash transactions: ", error);
             setLoading(false);
         });
 
@@ -93,8 +99,8 @@ export default function ZCashPage() {
                 <p className="text-5xl font-bold tracking-tighter">
                     {new Intl.NumberFormat("en-US", {
                     style: "currency",
-                    currency: zcashBalance.currency,
-                    }).format(zcashBalance.balance)}
+                    currency: "USD",
+                    }).format(zcashBalance)}
                 </p>
             </div>
              <p className="text-xs text-white/50 mt-1">From your Main Wallet</p>

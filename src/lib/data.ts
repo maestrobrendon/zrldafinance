@@ -159,11 +159,6 @@ export const mainBalance = {
   currency: 'USD',
 };
 
-export const zcashBalance = {
-  balance: 10000.00,
-  currency: 'USD',
-};
-
 export const categories = [
   'Groceries', 'Restaurants', 'Utilities', 'Rent', 'Mortgage', 'Transportation', 'Entertainment', 'Shopping', 'Travel', 'Income', 'Investments', 'Other'
 ];
