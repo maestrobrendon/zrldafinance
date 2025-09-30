@@ -11,23 +11,46 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function AccountSettingsPage() {
     const { toast } = useToast();
-    const user = auth.currentUser;
-    const [name, setName] = useState(user?.displayName || "");
-    const [email, setEmail] = useState(user?.email || "");
-    const [avatarUrl, setAvatarUrl] = useState(user?.photoURL || 'https://picsum.photos/seed/1/100/100');
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [ztag, setZtag] = useState("");
+    const [phone, setPhone] = useState("");
+    const [avatarUrl, setAvatarUrl] = useState('https://picsum.photos/seed/1/100/100');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [isSaving, setIsSaving] = useState(false);
+    const [canEditZtag, setCanEditZtag] = useState(true);
+
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
+        const unsubscribe = auth.onAuthStateChanged(async (user) => {
             if (user) {
                 setName(user.displayName || "");
                 setEmail(user.email || "");
                 setAvatarUrl(user.photoURL || 'https://picsum.photos/seed/1/100/100');
+
+                // Fetch additional user data from Firestore
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    setZtag(userData.ztag || "");
+                    setPhone(userData.phone || "");
+
+                    // Implement logic to check if ztag can be edited (once a month)
+                    const lastUpdated = userData.ztagLastUpdated?.toDate();
+                    if (lastUpdated) {
+                        const oneMonthAgo = new Date();
+                        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                        if (lastUpdated > oneMonthAgo) {
+                            setCanEditZtag(false);
+                        }
+                    }
+                }
             }
         });
         return () => unsubscribe();
@@ -37,16 +60,34 @@ export default function AccountSettingsPage() {
         const user = auth.currentUser;
         if (!user) return;
 
+        setIsSaving(true);
+        
+        // In a real app, here you would:
+        // 1. Check if the new ztag is unique against the database.
+        //    This requires a backend function (like a Cloud Function) for security.
+        //    const isUnique = await checkZtagUniqueness(ztag);
+        //    if (!isUnique) { toast({ variant: "destructive", title: "Ztag taken" }); return; }
+        
+        // 2. If email is changed, trigger Firebase's email verification flow.
+        //    if (email !== user.email) { await verifyBeforeUpdateEmail(user, email); }
+
         try {
+            // Update Firebase Auth profile
             await updateProfile(user, {
                 displayName: name,
                 photoURL: avatarUrl,
             });
-            await setDoc(doc(db, "users", user.uid), {
-                displayName: name,
-                email: email, // email is not editable here, but good to store
-                photoURL: avatarUrl
-            }, { merge: true });
+
+            // Update Firestore document
+            const userDocRef = doc(db, "users", user.uid);
+            await updateDoc(userDocRef, {
+                name: name,
+                photoURL: avatarUrl,
+                phone: phone,
+                ztag: ztag,
+                // If ztag was changed, update the timestamp
+                // ztagLastUpdated: serverTimestamp() 
+            });
 
             toast({
                 title: "Profile Updated",
@@ -58,6 +99,8 @@ export default function AccountSettingsPage() {
                 title: "Update Failed",
                 description: error.message,
             });
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -71,24 +114,12 @@ export default function AccountSettingsPage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const result = e.target?.result as string;
-                // For prototype, we'll use localStorage to 'store' the image locally
-                // In a real app, you would upload this to Firebase Storage
-                localStorage.setItem(`avatar_${auth.currentUser?.uid}`, result);
+                // In a real app, you would upload this to Firebase Storage and get a URL
                 setAvatarUrl(result);
             };
             reader.readAsDataURL(file);
         }
     };
-    
-     useEffect(() => {
-        if(auth.currentUser) {
-            const storedAvatar = localStorage.getItem(`avatar_${auth.currentUser.uid}`);
-            if (storedAvatar) {
-                setAvatarUrl(storedAvatar);
-            }
-        }
-    }, [auth.currentUser]);
-
 
     return (
         <div className="space-y-8">
@@ -134,17 +165,22 @@ export default function AccountSettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" value={email} disabled />
+                            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                             <p className="text-xs text-muted-foreground">Changing your email will require verification.</p>
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="ztag">@Ztag</Label>
-                            <Input id="ztag" defaultValue="@alex.doe" />
+                            <Input id="ztag" value={ztag} onChange={(e) => setZtag(e.target.value)} disabled={!canEditZtag || isSaving} />
+                            {!canEditZtag && <p className="text-xs text-muted-foreground">You can only change your @Ztag once every 30 days.</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phone">Phone Number</Label>
-                            <Input id="phone" type="tel" defaultValue="+1 234 567 890" />
+                            <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
                         </div>
-                        <Button onClick={handleSaveChanges}>Save Changes</Button>
+                        <Button onClick={handleSaveChanges} disabled={isSaving}>
+                            {isSaving && <Icons.logo className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

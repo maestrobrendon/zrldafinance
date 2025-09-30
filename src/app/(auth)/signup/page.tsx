@@ -18,8 +18,37 @@ import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { defaultUser, mainBalance, seedInitialData } from "@/lib/data";
+
+async function generateUniqueZtag(name: string): Promise<string> {
+    let ztag = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
+    if (!ztag) {
+        ztag = `user.${Math.random().toString(36).substring(2, 8)}`;
+    }
+
+    let isUnique = false;
+    let attempts = 0;
+    let finalZtag = ztag;
+
+    while (!isUnique && attempts < 10) {
+        const q = query(collection(db, "users"), where("ztag", "==", finalZtag));
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            isUnique = true;
+        } else {
+            finalZtag = `${ztag}${Math.floor(Math.random() * 1000)}`;
+            attempts++;
+        }
+    }
+
+    if (!isUnique) {
+        // Fallback to a purely random ztag if we can't find a unique one
+        finalZtag = `user.${Math.random().toString(36).substring(2, 8)}`;
+    }
+    
+    return finalZtag;
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -36,23 +65,25 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Update user profile in Firebase Auth
       await updateProfile(user, {
         displayName: name,
         photoURL: defaultUser.avatarUrl,
       });
 
-      // Create user document in Firestore
+      const ztag = await generateUniqueZtag(name);
+
       await setDoc(doc(db, "users", user.uid), {
         userId: user.uid,
         email: user.email,
         name: name,
-        balance: mainBalance.balance, // Start with default balance
+        balance: mainBalance.balance,
         KYC_status: 'Not Verified',
         photoURL: defaultUser.avatarUrl,
+        ztag: ztag,
+        phone: '',
+        ztagLastUpdated: null
       });
 
-      // Seed initial transactions and wallets for the new user
       await seedInitialData(user.uid);
 
       router.push("/dashboard");
