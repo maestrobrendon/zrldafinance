@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { defaultUser } from "@/lib/data";
+import { defaultUser, mainBalance } from "@/lib/data";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -36,7 +36,7 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Update user profile
+      // Update user profile in Firebase Auth
       await updateProfile(user, {
         displayName: name,
         photoURL: defaultUser.avatarUrl,
@@ -44,9 +44,11 @@ export default function SignupPage() {
 
       // Create user document in Firestore
       await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        displayName: name,
+        userId: user.uid,
         email: user.email,
+        name: name,
+        balance: mainBalance.balance, // Start with default balance
+        KYC_status: 'Not Verified',
         photoURL: defaultUser.avatarUrl,
       });
 
