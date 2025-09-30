@@ -108,6 +108,8 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     resolver: zodResolver(goalWalletSchema),
     defaultValues: {
       name: "",
+      goalAmount: '' as any,
+      contributionAmount: '' as any,
       fundingSource: "manual",
       lockOption: "until-target",
       smartReminders: false,
@@ -175,9 +177,14 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
             }
         }
 
+        // Remove undefined fields before sending to Firestore
+        const cleanedWalletData = Object.fromEntries(
+            Object.entries(walletData).filter(([, value]) => value !== undefined)
+        );
+
         const walletsCollection = collection(db, 'wallets');
         await addDoc(walletsCollection, {
-            ...walletData,
+            ...cleanedWalletData,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
@@ -670,3 +677,5 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     </Dialog>
   );
 }
+
+    
