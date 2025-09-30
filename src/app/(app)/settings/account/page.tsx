@@ -20,7 +20,7 @@ export default function AccountSettingsPage() {
     const [email, setEmail] = useState("");
     const [ztag, setZtag] = useState("");
     const [phone, setPhone] = useState("");
-    const [avatarUrl, setAvatarUrl] = useState('https://picsum.photos/seed/1/100/100');
+    const [avatarUrl, setAvatarUrl] = useState('');
     const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,7 +32,7 @@ export default function AccountSettingsPage() {
             if (user) {
                 setName(user.displayName || "");
                 setEmail(user.email || "");
-                setAvatarUrl(user.photoURL || 'https://picsum.photos/seed/1/100/100');
+                setAvatarUrl(user.photoURL || '');
 
                 // Fetch additional user data from Firestore
                 const userDocRef = doc(db, "users", user.uid);
@@ -63,11 +63,10 @@ export default function AccountSettingsPage() {
 
         setIsSaving(true);
         
-        // This simulates a file upload and getting a new URL.
-        // In a real app, you would upload `newAvatarFile` to a service like Firebase Storage.
+        // This simulates a file upload by generating a new placeholder URL.
         const newPhotoURL = newAvatarFile 
             ? `https://picsum.photos/seed/${Math.random()}/100/100` 
-            : user.photoURL;
+            : avatarUrl; // Keep current URL if no new file is selected
 
         const updatedProfile = {
             displayName: name,
@@ -85,10 +84,12 @@ export default function AccountSettingsPage() {
                 photoURL: newPhotoURL,
                 phone: phone,
                 ztag: ztag,
+                updatedAt: serverTimestamp(),
                 // If ztag was changed, update the timestamp
                 // ztagLastUpdated: serverTimestamp() 
             }, { merge: true });
 
+            setAvatarUrl(newPhotoURL); // Update local state to reflect new URL
             toast({
                 title: "Profile Updated",
                 description: "Your changes have been saved successfully.",
@@ -224,5 +225,3 @@ export default function AccountSettingsPage() {
         </div>
     )
 }
-
-    

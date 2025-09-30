@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icons } from "@/components/icons";
-import { user as initialUser } from "@/lib/data";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -40,8 +39,8 @@ export default function SettingsPage() {
     router.push('/login');
   };
 
-  const displayName = user?.displayName || initialUser.name;
-  const photoURL = user?.photoURL || initialUser.avatarUrl;
+  const displayName = user?.displayName || "User";
+  const photoURL = user?.photoURL || "";
 
 
   return (
@@ -65,7 +64,7 @@ export default function SettingsPage() {
           </Avatar>
           <div>
               <h2 className="text-2xl font-bold">{displayName}</h2>
-              <p className="text-muted-foreground">@alex.doe</p>
+              <p className="text-muted-foreground">@{user?.email?.split('@')[0]}</p>
           </div>
           <Button variant="outline" asChild>
             <Link href="/settings/account">Edit Profile</Link>
