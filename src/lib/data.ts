@@ -42,7 +42,7 @@ export type Wallet = {
   updatedAt: Date;
   // Goal-specific fields
   goalAmount?: number;
-  deadline?: Date;
+  deadline?: Date | Timestamp;
   // Budget-specific fields
   limit?: number; // The budget amount
   frequency?: 'daily' | 'weekly' | 'monthly';
@@ -92,7 +92,7 @@ export type Budget = Wallet & {
 export type Goal = Wallet & {
   type: 'goal';
   goalAmount: number;
-  deadline: Date;
+  deadline: Date | Timestamp;
 }
 
 
@@ -107,7 +107,7 @@ export const mainBalance = {
   currency: 'USD',
 };
 
-export const initialWallets: Omit<Wallet, 'id' | 'userId' | 'createdAt' | 'updatedAt'>[] = [
+export const initialWallets: Omit<Wallet, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'deadline'>[] & { deadline?: Date } = [
   {
     type: 'budget',
     name: 'Monthly Groceries',
