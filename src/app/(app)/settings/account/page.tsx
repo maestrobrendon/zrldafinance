@@ -63,23 +63,26 @@ export default function AccountSettingsPage() {
 
         setIsSaving(true);
         
-        const updatedProfile: { displayName?: string; photoURL?: string } = {
-            displayName: name,
-        };
+        // This simulates a file upload and getting a new URL.
+        // In a real app, you would upload `newAvatarFile` to a service like Firebase Storage.
+        const newPhotoURL = newAvatarFile 
+            ? `https://picsum.photos/seed/${Math.random()}/100/100` 
+            : user.photoURL;
 
-        if (avatarUrl && !avatarUrl.startsWith('data:')) {
-            updatedProfile.photoURL = avatarUrl;
-        }
+        const updatedProfile = {
+            displayName: name,
+            photoURL: newPhotoURL,
+        };
 
         try {
             // Update Firebase Auth profile
             await updateProfile(user, updatedProfile);
 
-            // Update Firestore document using setDoc with merge to avoid "no document" error
+            // Update Firestore document
             const userDocRef = doc(db, "users", user.uid);
             await setDoc(userDocRef, {
                 name: name,
-                photoURL: user.photoURL, // Keep Firestore in sync with what's in Auth
+                photoURL: newPhotoURL,
                 phone: phone,
                 ztag: ztag,
                 // If ztag was changed, update the timestamp
@@ -90,13 +93,13 @@ export default function AccountSettingsPage() {
                 title: "Profile Updated",
                 description: "Your changes have been saved successfully.",
             });
-             setNewAvatarFile(null);
+            setNewAvatarFile(null); // Reset file input state
         } catch (error: any) {
              console.error("Update error:", error.message);
             toast({
                 variant: "destructive",
                 title: "Update Failed",
-                description: error.message,
+                description: "An error occurred while saving your profile.",
             });
         } finally {
             setIsSaving(false);
@@ -164,8 +167,8 @@ export default function AccountSettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                             <p className="text-xs text-muted-foreground">Changing your email will require verification.</p>
+                            <Input id="email" type="email" value={email} disabled />
+                             <p className="text-xs text-muted-foreground">Email address cannot be changed in this prototype.</p>
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="ztag">@Ztag</Label>
@@ -221,3 +224,5 @@ export default function AccountSettingsPage() {
         </div>
     )
 }
+
+    
