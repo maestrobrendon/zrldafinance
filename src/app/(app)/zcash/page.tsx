@@ -11,7 +11,7 @@ import { type Transaction } from "@/lib/data";
 import Link from "next/link";
 import { format } from "date-fns";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, onSnapshot, limit } from "firebase/firestore";
 import type { User } from "firebase/auth";
 
 
@@ -43,12 +43,11 @@ export default function ZCashPage() {
 
   useEffect(() => {
     if (user) {
-        // Query for the 5 most recent transactions, sorted by timestamp.
+        // Query for recent transactions.
         const transactionsQuery = query(
             collection(db, "transactions"),
             where("userId", "==", user.uid),
-            orderBy("timestamp", "desc"),
-            limit(5)
+            limit(10) // Fetch a bit more to ensure we get non-income ones
         );
 
         const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
@@ -58,8 +57,11 @@ export default function ZCashPage() {
                 date: doc.data().timestamp.toDate().toISOString(),
             })) as unknown as Transaction[];
             
-            // Filter out 'income' transactions on the client side
-            const filteredTransactions = transactionsData.filter(tx => tx.type !== 'income');
+            // Sort by date descending on the client
+            const sortedTransactions = transactionsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            
+            // Filter out 'income' transactions on the client side and take the first 5
+            const filteredTransactions = sortedTransactions.filter(tx => tx.type !== 'income').slice(0, 5);
             
             setRecentTransactions(filteredTransactions);
             setLoading(false);
