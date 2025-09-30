@@ -2,6 +2,7 @@
 "use client"
 
 import * as React from "react";
+import { useParams } from 'next/navigation'
 import {
   Card,
   CardContent,
@@ -46,7 +47,9 @@ const groupTransactionsByMonth = (transactions: Transaction[]) => {
   }, {} as Record<string, Transaction[]>);
 };
 
-export default function WalletDetailPage({ params: { walletId } }: { params: { walletId: string } }) {
+export default function WalletDetailPage() {
+  const params = useParams();
+  const walletId = params.walletId as string;
   const [wallet, setWallet] = React.useState<Wallet | null>(null);
   
   React.useEffect(() => {
