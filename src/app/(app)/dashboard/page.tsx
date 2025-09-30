@@ -58,9 +58,7 @@ export default function DashboardPage() {
     if (user) {
         const q = query(
             collection(db, "transactions"),
-            where("userId", "==", user.uid),
-            orderBy("timestamp", "desc"),
-            limit(4)
+            where("userId", "==", user.uid)
         );
 
         const unsubscribeTransactions = onSnapshot(q, (snapshot) => {
@@ -69,7 +67,10 @@ export default function DashboardPage() {
                 ...doc.data(),
                 date: doc.data().timestamp.toDate().toISOString(),
             })) as unknown as Transaction[];
-            setRecentTransactions(transactionsData);
+            
+            const sortedTransactions = transactionsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            
+            setRecentTransactions(sortedTransactions.slice(0, 4));
             setLoading(false);
         });
 

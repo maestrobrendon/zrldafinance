@@ -51,8 +51,7 @@ export default function TransactionsPage() {
         if (user) {
             const q = query(
                 collection(db, "transactions"),
-                where("userId", "==", user.uid),
-                orderBy("timestamp", "desc")
+                where("userId", "==", user.uid)
             );
 
             const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
@@ -61,7 +60,9 @@ export default function TransactionsPage() {
                     ...doc.data(),
                     date: doc.data().timestamp.toDate().toISOString(),
                 })) as unknown as Transaction[];
-                setTransactions(transactionsData);
+
+                const sortedTransactions = transactionsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                setTransactions(sortedTransactions);
                 setLoading(false);
             }, (err) => {
                 console.error(err);
@@ -152,5 +153,3 @@ export default function TransactionsPage() {
         </div>
     );
 }
-
-    
