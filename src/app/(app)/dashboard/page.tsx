@@ -6,7 +6,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { mainBalance, wallets, type Transaction } from "@/lib/data";
+import { mainBalance, type Transaction, type Wallet } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
@@ -15,8 +15,9 @@ import AnalyticsSection from "@/components/dashboard/analytics-section";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import type { User } from 'firebase/auth';
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 const quickActions = [
     { label: "Send To", icon: Icons['send-2'], href: "/send" },
@@ -92,13 +93,39 @@ const recentTransactions: Transaction[] = [
 export default function DashboardPage() {
   const [showBanner, setShowBanner] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
         setUser(firebaseUser);
+        if (firebaseUser) {
+            const q = query(collection(db, "wallets"), where("userId", "==", firebaseUser.uid));
+            const unsubscribeWallets = onSnapshot(q, (querySnapshot) => {
+                const userWallets: Wallet[] = [];
+                querySnapshot.forEach((doc) => {
+                     const data = doc.data();
+                    userWallets.push({
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt?.toDate(),
+                        updatedAt: data.updatedAt?.toDate(),
+                        deadline: data.deadline?.toDate(),
+                    } as Wallet);
+                });
+                setWallets(userWallets);
+            }, (error) => {
+                console.error("Error fetching wallets:", error);
+                 if (error.code === 'permission-denied') {
+                    console.error("Firestore security rules are blocking the query.");
+                }
+            });
+            return () => unsubscribeWallets();
+        } else {
+            setWallets([]);
+        }
     });
     
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   const displayName = user?.displayName || "User";
@@ -255,5 +282,7 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
 
     

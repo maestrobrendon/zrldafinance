@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { defaultUser, mainBalance, seedInitialTransactions } from "@/lib/data";
+import { defaultUser, mainBalance, seedInitialData } from "@/lib/data";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -52,8 +52,8 @@ export default function SignupPage() {
         photoURL: defaultUser.avatarUrl,
       });
 
-      // Seed initial transactions for the new user
-      await seedInitialTransactions(user.uid);
+      // Seed initial transactions and wallets for the new user
+      await seedInitialData(user.uid);
 
       router.push("/dashboard");
     } catch (error: any) {
@@ -119,5 +119,3 @@ export default function SignupPage() {
     </>
   );
 }
-
-    
