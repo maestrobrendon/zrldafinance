@@ -41,6 +41,7 @@ import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firesto
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet } from "@/lib/data";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Label } from "../ui/label";
 
 type WalletType = "budget" | "goal";
 
