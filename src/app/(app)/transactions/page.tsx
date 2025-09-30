@@ -41,14 +41,19 @@ export default function TransactionsPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+        const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
             setUser(firebaseUser);
+            if (!firebaseUser) {
+                setTransactions([]);
+                setLoading(false);
+            }
         });
-        return () => unsubscribe();
+        return () => unsubscribeAuth();
     }, []);
 
     useEffect(() => {
         if (user) {
+            setLoading(true);
             const q = query(
                 collection(db, "transactions"),
                 where("userId", "==", user.uid)
@@ -120,7 +125,7 @@ export default function TransactionsPage() {
                                     const Icon = categoryIcons[activity.category] || Icons.grid;
                                     const isIncome = activity.type === 'income';
                                     return (
-                                        <div key={activity.transactionId} className="p-4">
+                                        <div key={activity.id} className="p-4">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
                                                     <div className="bg-primary/20 text-primary p-3 rounded-lg">
