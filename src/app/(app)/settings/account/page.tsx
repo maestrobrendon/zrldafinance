@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import { updateProfile } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function AccountSettingsPage() {
@@ -63,19 +63,10 @@ export default function AccountSettingsPage() {
 
         setIsSaving(true);
         
-        // In a real app, you would:
-        // 1. If a newAvatarFile exists, upload it to Firebase Storage.
-        //    const photoURL = await uploadFile(newAvatarFile);
-        // 2. Then, use that URL to update the profile.
-
-        // For this prototype, we'll simulate the UI change but won't do the upload to avoid errors.
-        // We will only update attributes that don't require a backend service.
         const updatedProfile: { displayName?: string; photoURL?: string } = {
             displayName: name,
         };
 
-        // Only include photoURL if it's NOT a data URI (i.e., not a newly selected file)
-        // This prevents the "URL too long" error.
         if (avatarUrl && !avatarUrl.startsWith('data:')) {
             updatedProfile.photoURL = avatarUrl;
         }
@@ -84,16 +75,16 @@ export default function AccountSettingsPage() {
             // Update Firebase Auth profile
             await updateProfile(user, updatedProfile);
 
-            // Update Firestore document
+            // Update Firestore document using setDoc with merge to avoid "no document" error
             const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, {
+            await setDoc(userDocRef, {
                 name: name,
                 photoURL: user.photoURL, // Keep Firestore in sync with what's in Auth
                 phone: phone,
                 ztag: ztag,
                 // If ztag was changed, update the timestamp
                 // ztagLastUpdated: serverTimestamp() 
-            });
+            }, { merge: true });
 
             toast({
                 title: "Profile Updated",
