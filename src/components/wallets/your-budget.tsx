@@ -40,7 +40,7 @@ export default function YourBudget({ budgets }: YourBudgetProps) {
         {budgets.map((item) => {
             const limit = item.limit || 0;
             const balance = item.balance || 0;
-            const spent = limit - balance;
+            const spent = limit > balance ? limit - balance : 0;
             const progress = limit > 0 ? (spent / limit) * 100 : 0;
             
             return (

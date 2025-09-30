@@ -676,7 +676,3 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     </Dialog>
   );
 }
-
-    
-
-    
