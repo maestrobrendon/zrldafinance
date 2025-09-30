@@ -159,7 +159,13 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                 ...walletData,
                 goalAmount: values.goalAmount,
                 deadline: values.deadline ? Timestamp.fromDate(values.deadline) : undefined,
-                // Add other goal fields as they are implemented
+                fundingSource: values.fundingSource,
+                contributionAmount: values.contributionAmount,
+                contributionFrequency: values.contributionFrequency,
+                lockOption: values.lockOption,
+                goalImage: values.goalImage,
+                smartReminders: values.smartReminders,
+                flexContributions: values.flexContributions,
             };
             if (values.lockOption) { // Simplified locking logic for goals
                 walletData.status = 'locked';
@@ -659,5 +665,3 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     </Dialog>
   );
 }
-
-    

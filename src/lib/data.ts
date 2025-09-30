@@ -44,6 +44,13 @@ export type Wallet = {
   // Goal-specific fields
   goalAmount?: number;
   deadline?: Date | Timestamp;
+  fundingSource?: 'manual' | 'auto';
+  contributionAmount?: number;
+  contributionFrequency?: string;
+  lockOption?: 'until-target' | 'until-date';
+  goalImage?: string;
+  smartReminders?: boolean;
+  flexContributions?: boolean;
   
   // Budget-specific fields
   limit?: number; // The budget amount
@@ -106,7 +113,7 @@ export type Budget = Wallet & {
 export type Goal = Wallet & {
   type: 'goal';
   goalAmount: number;
-  deadline: Date | Timestamp;
+  deadline: Timestamp;
 }
 
 
@@ -290,5 +297,3 @@ export const seedInitialData = async (userId: string) => {
 
     await batch.commit();
 };
-
-    
