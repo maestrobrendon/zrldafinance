@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { defaultUser } from "@/lib/data";
 
@@ -34,22 +34,17 @@ export default function SignupPage() {
     setError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      if (userCredential.user) {
-        const user = userCredential.user;
-        await updateProfile(user, {
-            displayName: name,
-            photoURL: defaultUser.avatarUrl,
-        });
+      const user = userCredential.user;
+      
+      // Create user document in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        displayName: name,
+        email: user.email,
+        photoURL: defaultUser.avatarUrl,
+        // You can add other default fields here
+      });
 
-        // Create user document in Firestore
-        await setDoc(doc(db, "users", user.uid), {
-            uid: user.uid,
-            displayName: name,
-            email: user.email,
-            photoURL: defaultUser.avatarUrl,
-            // You can add other default fields here
-        });
-      }
       router.push("/dashboard");
     } catch (error: any) {
       setError(error.message);
