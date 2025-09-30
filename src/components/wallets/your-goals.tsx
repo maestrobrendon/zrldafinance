@@ -16,6 +16,15 @@ interface YourGoalsProps {
 }
 
 export default function YourGoals({ goals }: YourGoalsProps) {
+  const [filter, setFilter] = useState<GoalStatusFilter>("Live");
+
+  const filteredGoals = goals.filter(goal => {
+      const progress = goal.goalAmount ? (goal.balance / goal.goalAmount) * 100 : 0;
+      if (filter === 'Finished') {
+          return progress >= 100;
+      }
+      return progress < 100;
+  })
   
   if (goals.length === 0) {
     return (
@@ -29,7 +38,11 @@ export default function YourGoals({ goals }: YourGoalsProps) {
 
   return (
     <div className="space-y-4">
-        {goals.map((item: Goal) => {
+        <div className="flex justify-end gap-2">
+            <Button variant={filter === 'Live' ? 'link' : 'ghost'} onClick={() => setFilter('Live')}>Live</Button>
+            <Button variant={filter === 'Finished' ? 'link' : 'ghost'} onClick={() => setFilter('Finished')}>Finished</Button>
+        </div>
+        {filteredGoals.map((item: Goal) => {
             const progress = item.goalAmount ? (item.balance / item.goalAmount) * 100 : 0;
             const daysLeft = item.deadline ? differenceInDays(item.deadline, new Date()) : null;
 

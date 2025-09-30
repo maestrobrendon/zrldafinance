@@ -46,7 +46,7 @@ export default function MovePage() {
                     {fromWallet && <p className="text-sm text-muted-foreground">Available balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format((fromWallet as any).balance)}</p>}
                     <div className="space-y-2">
                         <Label>To</Label>
-                        <Select onValueChange={setToWalletId} disabled={!fromWallet}>
+                        <Select onValueChange={setToWalletId} disabled={!fromWalletId}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select destination wallet" />
                             </SelectTrigger>
@@ -60,11 +60,11 @@ export default function MovePage() {
                     
                     <div className="space-y-2">
                         <Label htmlFor="amount">Amount to Move</Label>
-                        <Input id="amount" type="number" placeholder="$0.00" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={!fromWallet || !toWallet} />
+                        <Input id="amount" type="number" placeholder="$0.00" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={!fromWalletId || !toWalletId} />
                     </div>
                 </CardContent>
             </Card>
-            <Button className="w-full" onClick={() => setStep('review')} disabled={!amount || !fromWallet || !toWallet}>Review Move</Button>
+            <Button className="w-full" onClick={() => setStep('review')} disabled={!amount || !fromWalletId || !toWalletId}>Review Move</Button>
         </div>
     );
 
@@ -82,7 +82,7 @@ export default function MovePage() {
                      <Separator />
                     <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">From</p>
-                         <p className="font-medium">{(fromWallet as any)?.name}</p>
+                         <p className="font-medium">{(fromWallet as any)?.name || 'Main Wallet'}</p>
                     </div>
                      <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">To</p>
@@ -118,7 +118,7 @@ export default function MovePage() {
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">From</span>
-                        <span className="font-medium">{(fromWallet as any)?.name}</span>
+                        <span className="font-medium">{(fromWallet as any)?.name || 'Main Wallet'}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">To</span>
@@ -130,7 +130,9 @@ export default function MovePage() {
                     </div>
                 </CardContent>
             </Card>
-            <Button className="w-full" onClick={() => setStep('form')}>Done</Button>
+            <Button className="w-full" asChild>
+                <Link href="/wallets">Done</Link>
+            </Button>
         </div>
     );
 

@@ -37,7 +37,7 @@ export default function TopGoals({ goals }: TopGoalsProps) {
         <CarouselContent>
             {topGoals.map((goal) => {
                 const progress = goal.goalAmount ? (goal.balance / goal.goalAmount) * 100 : 0;
-                const daysLeft = goal.deadline ? differenceInDays(goal.deadline, new Date()) : 0;
+                const daysLeft = goal.deadline ? differenceInDays(goal.deadline, new Date()) : null;
                 
                 return (
                     <CarouselItem key={goal.id} className="basis-2/3 md:basis-1/3">
@@ -46,7 +46,7 @@ export default function TopGoals({ goals }: TopGoalsProps) {
                                 <CardContent className="p-4 space-y-2">
                                     <div className="flex justify-between text-sm text-muted-foreground">
                                         <span>{goal.name}</span>
-                                        {daysLeft > 0 && <span>{daysLeft} days left</span>}
+                                        {daysLeft !== null && daysLeft > 0 && <span>{daysLeft} days left</span>}
                                     </div>
                                     <p className="text-2xl font-bold">
                                         {new Intl.NumberFormat("en-US", {
