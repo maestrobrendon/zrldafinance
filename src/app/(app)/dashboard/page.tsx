@@ -48,32 +48,52 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Listen for authentication state changes.
     const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
         setUser(firebaseUser);
         if (!firebaseUser) {
+            // If user logs out, clear the data and stop loading.
+            setWallets([]);
+            setRecentTransactions([]);
             setLoading(false);
         }
     });
+    
+    return () => unsubscribeAuth();
+  }, []);
 
+  useEffect(() => {
+    // Only fetch data if a user is logged in.
     if (user) {
+        setLoading(true);
+
+        // Real-time listener for recent transactions, limited to 4.
         const transactionsQuery = query(
             collection(db, "transactions"),
-            where("userId", "==", user.uid)
+            where("userId", "==", user.uid),
+            orderBy("timestamp", "desc"),
+            limit(4)
         );
 
         const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
             const transactionsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
+                // Convert Firestore Timestamp to ISO string for consistency.
                 date: doc.data().timestamp.toDate().toISOString(),
             })) as unknown as Transaction[];
-            
-            const sortedTransactions = transactionsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            
-            setRecentTransactions(sortedTransactions.slice(0, 4));
+            setRecentTransactions(transactionsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching recent transactions:", error);
+            // Handle specific errors like permission denied.
+            if (error.code === 'permission-denied') {
+                console.error("Firestore security rules are blocking the query.");
+            }
             setLoading(false);
         });
 
+        // Real-time listener for user's wallets.
         const walletsQuery = query(
             collection(db, "wallets"),
             where("userId", "==", user.uid)
@@ -85,17 +105,19 @@ export default function DashboardPage() {
                 ...doc.data()
             })) as Wallet[];
             setWallets(walletsData);
+        }, (error) => {
+            console.error("Error fetching wallets:", error);
+             if (error.code === 'permission-denied') {
+                console.error("Firestore security rules are blocking the query.");
+            }
         });
 
+        // Cleanup function to unsubscribe from listeners when the component unmounts.
         return () => {
-            unsubscribeAuth();
             unsubscribeTransactions();
             unsubscribeWallets();
         }
     }
-
-
-    return () => unsubscribeAuth();
   }, [user]);
 
   const displayName = user?.displayName || "User";
@@ -256,5 +278,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
