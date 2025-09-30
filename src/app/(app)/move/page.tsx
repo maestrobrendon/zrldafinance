@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
-import { wallets as allWallets, mainBalance } from "@/lib/data";
+import { mainBalance } from "@/lib/data";
 import Link from "next/link";
 
 export default function MovePage() {
@@ -18,11 +18,9 @@ export default function MovePage() {
     const [toWalletId, setToWalletId] = useState<string | null>(null);
     const [amount, setAmount] = useState('');
 
-    const fromWallet = fromWalletId === 'main' 
-        ? { id: 'main', name: 'Main Wallet', balance: mainBalance.balance } 
-        : allWallets.find(w => w.id === fromWalletId);
-
-    const toWallet = toWalletId ? allWallets.find(w => w.id === toWalletId) : null;
+    const fromWallet = null; // Replace with actual data fetching
+    const toWallet = null; // Replace with actual data fetching
+    const allWallets: any[] = []; // Replace with actual data fetching
     
     const renderForm = () => (
          <div className="space-y-6">
@@ -45,7 +43,7 @@ export default function MovePage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    {fromWallet && <p className="text-sm text-muted-foreground">Available balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(fromWallet.balance)}</p>}
+                    {fromWallet && <p className="text-sm text-muted-foreground">Available balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format((fromWallet as any).balance)}</p>}
                     <div className="space-y-2">
                         <Label>To</Label>
                         <Select onValueChange={setToWalletId} disabled={!fromWallet}>
@@ -84,11 +82,11 @@ export default function MovePage() {
                      <Separator />
                     <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">From</p>
-                         <p className="font-medium">{fromWallet?.name}</p>
+                         <p className="font-medium">{(fromWallet as any)?.name}</p>
                     </div>
                      <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">To</p>
-                        <p className="font-medium">{toWallet?.name}</p>
+                        <p className="font-medium">{(toWallet as any)?.name}</p>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Fee</span>
@@ -110,7 +108,7 @@ export default function MovePage() {
             </div>
             <div>
                 <h2 className="text-2xl font-bold">Move Successful!</h2>
-                <p className="text-muted-foreground">You have successfully moved {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))} to {toWallet?.name}.</p>
+                <p className="text-muted-foreground">You have successfully moved {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))} to {(toWallet as any)?.name}.</p>
             </div>
             <Card className="w-full text-left">
                 <CardContent className="pt-6 space-y-4">
@@ -120,11 +118,11 @@ export default function MovePage() {
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">From</span>
-                        <span className="font-medium">{fromWallet?.name}</span>
+                        <span className="font-medium">{(fromWallet as any)?.name}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">To</span>
-                        <span className="font-medium">{toWallet?.name}</span>
+                        <span className="font-medium">{(toWallet as any)?.name}</span>
                     </div>
                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Transaction ID</span>

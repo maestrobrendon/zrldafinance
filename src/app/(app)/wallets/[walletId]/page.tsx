@@ -2,21 +2,14 @@
 "use client"
 
 import * as React from "react";
+import { doc, onSnapshot } from "firebase/firestore";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { wallets, budgets, goals, Transaction, mainBalance } from "@/lib/data";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import { type Wallet, type Transaction, mainBalance } from "@/lib/data";
 import { Progress } from "@/components/ui/progress";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInDays } from "date-fns";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
@@ -25,21 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AddFundsDialog } from "@/components/wallets/add-funds-dialog";
 import { WithdrawFundsDialog } from "@/components/wallets/withdraw-funds-dialog";
-
-const chartData = [
-  { month: "Oct", desktop: 186 },
-  { month: "Nov", desktop: 305 },
-  { month: "Dec", desktop: 237 },
-  { month: "Jan", desktop: 273 },
-  { month: "Feb", desktop: 209 },
-]
-
-const chartConfig = {
-  desktop: {
-    label: "Spending",
-    color: "hsl(var(--chart-1))",
-  },
-}
+import { db, auth } from "@/lib/firebase";
+import { User } from "firebase/auth";
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
   Entertainment: Icons.entertainment,
@@ -67,31 +47,77 @@ const groupTransactionsByMonth = (transactions: Transaction[]) => {
 };
 
 export default function WalletDetailPage({ params: { walletId } }: { params: { walletId: string } }) {
-  const [isClient, setIsClient] = React.useState(false);
+  const [user, setUser] = React.useState<User | null>(auth.currentUser);
+  const [wallet, setWallet] = React.useState<Wallet | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    setIsClient(true);
+    const unsubscribeAuth = auth.onAuthStateChanged(setUser);
+    return () => unsubscribeAuth();
   }, []);
 
-  const allItems = [...wallets, ...budgets, ...goals];
-  const item = allItems.find(w => w.id === walletId);
+  React.useEffect(() => {
+    if (user) {
+      const docRef = doc(db, "wallets", walletId);
+      const unsubscribe = onSnapshot(docRef, (doc) => {
+        if (doc.exists()) {
+          const data = doc.data() as Wallet;
+          // Ensure that the wallet belongs to the current user
+          if (data.userId === user.uid) {
+            setWallet({ id: doc.id, ...data });
+          } else {
+            setError("You do not have permission to view this wallet.");
+          }
+        } else {
+          setError("Wallet not found.");
+        }
+        setLoading(false);
+      }, (err) => {
+        console.error("Error fetching wallet:", err);
+        setError("Failed to load wallet data.");
+        setLoading(false);
+      });
 
-  if (!item) {
+      return () => unsubscribe();
+    } else {
+      setLoading(false);
+    }
+  }, [walletId, user]);
+
+
+  if (loading) {
     return (
-      <div className="space-y-8 p-4">
-        <h1 className="text-3xl font-bold tracking-tight">Wallet Not Found</h1>
-        <p className="text-muted-foreground">The wallet you are looking for does not exist.</p>
+        <div className="flex justify-center items-center h-screen">
+            <Icons.logo className="h-10 w-10 animate-spin text-primary" />
+        </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 p-4 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-destructive">{error}</h1>
+        <Button asChild>
+            <Link href="/wallets">Go Back to Wallets</Link>
+        </Button>
       </div>
     );
   }
 
-  const isWallet = 'balance' in item && !('spent' in item) && !('goal' in item);
-  const isBudget = 'spent' in item;
-  const isGoal = 'goal' in item && 'balance' in item;
-  const typedItem = item as any;
+  if (!wallet) {
+    return null; // or a more specific "not found" component
+  }
+
+  const isGoal = wallet.type === 'goal';
+  const isBudget = wallet.type === 'budget';
+  const progress = isGoal && wallet.goalAmount ? (wallet.balance / wallet.goalAmount) * 100 :
+                   isBudget && wallet.limit ? (wallet.balance / wallet.limit) * 100 : 0;
+  const daysLeft = isGoal && wallet.deadline ? differenceInDays(wallet.deadline.toDate(), new Date()) : null;
 
 
-  const itemTransactions = (item as any).transactions || [];
+  // Mock data for transactions - replace with actual transaction fetching logic
+  const itemTransactions: Transaction[] = [];
   const groupedTransactions = groupTransactionsByMonth(itemTransactions);
 
 
@@ -102,22 +128,14 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" asChild>
                     <Link href="/wallets"><Icons.arrowLeft className="h-5 w-5" /></Link>
                 </Button>
-                <h1 className="text-xl font-bold tracking-tight">{item.name}</h1>
+                <h1 className="text-xl font-bold tracking-tight">{wallet.name}</h1>
             </div>
             
-            {isGoal && typedItem.locked && (
+            {wallet.status === 'locked' && (
                 <div className="text-center">
                     <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 border-none">
                         <Icons.lock className="mr-1 h-3 w-3" />
-                         {typedItem.deadline ? `Locked until ${format(new Date(typedItem.deadline), 'MMM d, yyyy')}` : 'Locked until target is met'}
-                    </Badge>
-                </div>
-            )}
-             {isBudget && item.status !== 'Available' && (
-                <div className="text-center">
-                    <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 border-none">
-                        <Icons.lock className="mr-1 h-3 w-3" />
-                        {item.status}
+                         {isGoal && wallet.deadline ? `Locked until ${format(wallet.deadline.toDate(), 'MMM d, yyyy')}` : 'Locked'}
                     </Badge>
                 </div>
             )}
@@ -127,7 +145,7 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                     {new Intl.NumberFormat("en-US", {
                     style: "currency",
                     currency: 'USD',
-                    }).format((item as any).balance || (item as any).amount)}
+                    }).format(wallet.balance)}
                 </p>
             </div>
 
@@ -142,7 +160,7 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                         </div>
                     }
                     mainBalance={mainBalance.balance}
-                    walletName={item.name}
+                    walletName={wallet.name}
                 />
                 <WithdrawFundsDialog 
                     trigger={
@@ -153,8 +171,8 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                             <span className="text-sm font-medium">Withdraw</span>
                         </div>
                     }
-                    walletBalance={(item as any).balance || (item as any).amount}
-                    walletName={item.name}
+                    walletBalance={wallet.balance}
+                    walletName={wallet.name}
                 />
                 <div className="flex flex-col items-center gap-2">
                      <Button variant="outline" size="icon" className="w-12 h-12 rounded-full bg-primary/10 border-primary/20 text-primary">
@@ -167,146 +185,67 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
 
         {isBudget && (
             <div className="px-4 space-y-4">
-                <div className="grid grid-cols-3 gap-2 text-center">
+                 <Progress value={progress} className="h-2" />
+                <div className="grid grid-cols-2 gap-2 text-center">
                     <div>
-                        <p className="text-xs text-muted-foreground">Spent</p>
-                        <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.spent)}</p>
+                        <p className="text-xs text-muted-foreground">Current Balance</p>
+                        <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(wallet.balance)}</p>
                     </div>
                      <div>
-                        <p className="text-xs text-muted-foreground">Left to Spend</p>
-                        <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.leftToSpend)}</p>
+                        <p className="text-xs text-muted-foreground">Budget Limit</p>
+                        <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(wallet.limit || 0)}</p>
                     </div>
-                     <div>
-                        <p className="text-xs text-muted-foreground">Limit</p>
-                        <p className="font-bold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.limit)}</p>
-                    </div>
-                </div>
-                <div>
-                    <Progress value={item.progress} className="h-2" />
-                    {item.warning && (
-                        <div className="flex items-center text-xs text-orange-400 gap-2 mt-2">
-                            <Icons.flame className="h-4 w-4" />
-                            <span>{item.warning}</span>
-                        </div>
-                    )}
                 </div>
             </div>
         )}
 
          {isGoal && (
             <div className="px-4">
-                <Progress value={item.progress} className="h-2" />
+                <Progress value={progress} className="h-2" />
                 <div className="flex justify-between text-sm mt-2">
                     <p>
                         <span className="font-bold">
-                        {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.balance)}
+                        {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(wallet.balance)}
                         </span>
                         {' '} of {' '}
-                        {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.goal)}
+                        {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(wallet.goalAmount || 0)}
                     </p>
-                    <p className="text-muted-foreground">{item.daysLeft} days left</p>
+                    {daysLeft !== null && <p className="text-muted-foreground">{daysLeft > 0 ? `${daysLeft} days left` : 'Finished'}</p>}
                 </div>
             </div>
       )}
 
-
-        {isBudget && (item as any).savingRules && (item as any).savingRules.length > 0 && (
-             <div className="px-4 space-y-3">
-                <h2 className="text-lg font-bold tracking-tight">Saving rules</h2>
-                <Card>
-                    <CardContent className="p-4 space-y-4">
-                       {(item as any).savingRules.map((rule: any, index: number) => {
-                           const Icon = Icons[rule.icon as keyof typeof Icons] as React.ElementType || Icons.grid;
-                           return (
-                             <div key={rule.id}>
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-primary/20 text-primary p-3 rounded-lg">
-                                        <Icon className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold">{rule.name}</p>
-                                        <p className="text-sm text-muted-foreground">{rule.description}</p>
-                                    </div>
-                                </div>
-                                {index < (item as any).savingRules.length - 1 && <Separator className="my-4" />}
-                             </div>
-                           )
-                       })}
-                    </CardContent>
-                </Card>
-            </div>
-        )}
-
-        {isGoal && (
+      {isGoal && (
              <div className="px-4 space-y-3">
                 <h2 className="text-lg font-bold tracking-tight">Details</h2>
                 <Card>
                     <CardContent className="p-4 space-y-4">
                        <div className="flex justify-between">
                             <span className="text-muted-foreground">Target Amount</span>
-                            <span className="font-medium">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(typedItem.goal)}</span>
+                            <span className="font-medium">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(wallet.goalAmount || 0)}</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Deadline</span>
-                            <span className="font-medium">{typedItem.deadline ? format(new Date(typedItem.deadline), 'MMM d, yyyy') : 'Not set'}</span>
+                            <span className="font-medium">{wallet.deadline ? format(wallet.deadline.toDate(), 'MMM d, yyyy') : 'Not set'}</span>
                         </div>
-                         <Separator />
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Days Left</span>
-                            <span className="font-medium">{typedItem.daysLeft}</span>
-                        </div>
+                         {daysLeft !== null && (
+                            <>
+                                <Separator />
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Days Left</span>
+                                    <span className="font-medium">{daysLeft > 0 ? daysLeft : 0}</span>
+                                </div>
+                            </>
+                         )}
                     </CardContent>
                 </Card>
             </div>
         )}
 
-        <div className="px-4 space-y-2">
-            <h2 className="text-lg font-bold tracking-tight">This Month</h2>
-            <p className="text-sm text-muted-foreground">You Spent $8.95 more than last month</p>
-             <Card>
-                <CardContent className="p-2">
-                <ChartContainer config={chartConfig} className="aspect-auto h-[150px] w-full">
-                    <AreaChart
-                        accessibilityLayer
-                        data={chartData}
-                        margin={{
-                            left: 0,
-                            right: 0,
-                            top: 10,
-                            bottom: 0,
-                        }}
-                    >
-                        <CartesianGrid vertical={false} strokeDasharray="4 4" className="stroke-muted-foreground/30" />
-                        <XAxis
-                        dataKey="month"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => value.slice(0, 3)}
-                        />
-                        <ChartTooltip
-                            cursor={false}
-                            content={<ChartTooltipContent indicator="dot" />}
-                        />
-                        <Area
-                        dataKey="desktop"
-                        type="natural"
-                        fill="var(--color-desktop)"
-                        fillOpacity={0.4}
-                        stroke="var(--color-desktop)"
-                        stackId="a"
-                        />
-                    </AreaChart>
-                </ChartContainer>
-                </CardContent>
-            </Card>
-        </div>
-
-
-        <div className="space-y-4">
-            <h2 className="text-lg font-bold tracking-tight px-4">Transaction Details</h2>
-            {Object.entries(groupedTransactions).map(([month, transactions]) => (
+        <div className="space-y-4 pt-8">
+            <h2 className="text-lg font-bold tracking-tight px-4">Transaction History</h2>
+            {Object.keys(groupedTransactions).length > 0 ? Object.entries(groupedTransactions).map(([month, transactions]) => (
                 <div key={month}>
                     <h3 className="text-sm font-semibold text-muted-foreground px-4 mb-2">{month}</h3>
                      <Card>
@@ -332,7 +271,7 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                                             <div>
                                                 <p className="font-medium">{activity.description}</p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {isClient ? format(parseISO(activity.date), 'MMM d, hh:mm a') : ''}
+                                                    {format(parseISO(activity.date), 'MMM d, hh:mm a')}
                                                 </p>
                                             </div>
                                         </div>
@@ -351,7 +290,13 @@ export default function WalletDetailPage({ params: { walletId } }: { params: { w
                         </CardContent>
                      </Card>
                 </div>
-            ))}
+            )) : (
+                 <Card>
+                    <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">No transactions for this wallet yet.</p>
+                    </CardContent>
+                </Card>
+            )}
       </div>
     </div>
   );

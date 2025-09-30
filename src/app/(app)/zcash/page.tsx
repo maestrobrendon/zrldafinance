@@ -1,15 +1,19 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
-import { zcashBalance, transactions } from "@/lib/data";
+import { zcashBalance, type Transaction } from "@/lib/data";
 import Link from "next/link";
 import { format } from "date-fns";
+import { auth, db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import type { User } from "firebase/auth";
+
 
 const favoritePeople = [
     { id: 'fav1', name: 'Grace L.', avatarUrl: 'https://picsum.photos/seed/grace/100/100', flag: '🇬🇭' },
@@ -21,9 +25,47 @@ const favoritePeople = [
 
 export default function ZCashPage() {
   const [showRequest, setShowRequest] = useState(true);
-  const recentTransactions = transactions
-    .filter(t => t.type !== 'income')
-    .slice(0, 5);
+  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      if (!firebaseUser) {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+        const transactionsQuery = query(
+            collection(db, "transactions"),
+            where("userId", "==", user.uid),
+            where("type", "!=", "income"),
+            orderBy("timestamp", "desc"),
+            limit(5)
+        );
+
+        const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+            const transactionsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                date: doc.data().timestamp.toDate().toISOString(),
+            })) as unknown as Transaction[];
+            setRecentTransactions(transactionsData);
+            setLoading(false);
+        });
+
+        return () => {
+            unsubscribeTransactions();
+        }
+    }
+  }, [user]);
+
 
   const moneyRequest = {
     name: 'Liz Dizon',
@@ -131,6 +173,11 @@ export default function ZCashPage() {
         <h2 className="text-2xl font-bold tracking-tight mb-4">Recent Activity</h2>
         <Card>
             <CardContent className="p-0">
+               {loading ? (
+                 <div className="flex justify-center items-center h-24">
+                    <Icons.logo className="h-6 w-6 animate-spin" />
+                </div>
+               ) : recentTransactions.length > 0 ? (
                 <div className="space-y-4">
                 {recentTransactions.map((transaction, index) => (
                     <div key={transaction.id}>
@@ -158,6 +205,11 @@ export default function ZCashPage() {
                     </div>
                 ))}
                 </div>
+               ) : (
+                <div className="p-6 text-center">
+                    <p className="text-muted-foreground">No recent activity.</p>
+                </div>
+               )}
             </CardContent>
         </Card>
       </div>
