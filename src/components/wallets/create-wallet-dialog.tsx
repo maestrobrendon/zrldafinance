@@ -13,6 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -96,7 +98,6 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
   });
 
   const onSubmit = (values: any) => {
-    console.log(activeTab, values);
     if(onWalletCreated) {
         if(activeTab === 'budget') {
             onWalletCreated({
@@ -112,6 +113,9 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
         }
     }
     setOpen(false); // Close dialog on success
+    // Reset forms after submission
+    budgetForm.reset();
+    goalForm.reset();
   };
 
   const totalBudget = budgetForm.watch("totalBudget");
@@ -384,8 +388,12 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                     </CollapsibleContent>
                  </Collapsible>
 
-
-                <Button type="submit" className="w-full">Create Budget Wallet</Button>
+                <DialogFooter className="px-6 pb-6 pt-0">
+                    <DialogClose asChild>
+                        <Button type="button" variant="ghost">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit">Create Budget Wallet</Button>
+                </DialogFooter>
               </form>
             </Form>
           </TabsContent>
@@ -491,7 +499,12 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
                     </CardContent>
                 </Card>
 
-                <Button type="submit" className="w-full">Create Goal Wallet</Button>
+                 <DialogFooter className="px-6 pb-6 pt-0">
+                    <DialogClose asChild>
+                        <Button type="button" variant="ghost">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit">Create Goal Wallet</Button>
+                 </DialogFooter>
               </form>
             </Form>
           </TabsContent>
@@ -500,5 +513,3 @@ export function CreateWalletDialog({ trigger, onWalletCreated }: CreateWalletDia
     </Dialog>
   );
 }
-
-    
