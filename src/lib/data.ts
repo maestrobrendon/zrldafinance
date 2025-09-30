@@ -53,8 +53,7 @@ export type Wallet = {
   flexContributions?: boolean;
   
   // Budget-specific fields
-  limit?: number; // The budget amount
-  frequency?: 'daily' | 'weekly' | 'monthly' | 'bi-weekly';
+  limit?: number;
   spendLimit?: number;
   isLocked?: boolean;
   lockDuration?: number; // in days
@@ -107,7 +106,6 @@ export type SavingRule = {
 export type Budget = Wallet & {
   type: 'budget';
   limit: number;
-  frequency: 'daily' | 'weekly' | 'monthly';
 }
 
 export type Goal = Wallet & {
@@ -132,18 +130,16 @@ export const initialWallets: Omit<Wallet, 'id' | 'userId' | 'createdAt' | 'updat
   {
     type: 'budget',
     name: 'Monthly Groceries',
-    balance: 175.50,
+    balance: 400,
     status: 'open',
     limit: 400,
-    frequency: 'monthly',
   },
   {
     type: 'budget',
     name: 'Coffee & Snacks',
-    balance: 45.20,
+    balance: 75,
     status: 'open',
     limit: 75,
-    frequency: 'weekly',
   },
   {
     type: 'goal',
