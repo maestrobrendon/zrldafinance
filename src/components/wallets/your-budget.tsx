@@ -28,7 +28,7 @@ export default function YourBudget({ budgets }: YourBudgetProps) {
       {budgets.map((item) => {
           const limit = item.limit || 0;
           const balance = item.balance || 0;
-          const spent = limit - balance;
+          const spent = limit > 0 ? limit - balance : 0;
           const progress = limit > 0 ? (balance / limit) * 100 : 0;
           
           return (
@@ -49,23 +49,23 @@ export default function YourBudget({ budgets }: YourBudgetProps) {
                         }).format(limit)}
                       </p>
                       
-                      <div>
-                        <div className="grid grid-cols-3 gap-4 text-center my-2">
+                      <div className="space-y-2">
+                        <Progress value={progress} className="h-2" />
+                        <div className="flex justify-between items-center text-sm">
                             <div>
                                 <p className="text-xs text-muted-foreground">Spent</p>
                                 <p className="font-semibold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(spent)}</p>
                             </div>
-                            <div>
+                            <div className="text-center">
                                 <p className="text-xs text-muted-foreground">Left to Spend</p>
                                 <p className="font-semibold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(balance)}</p>
                             </div>
-                            <div>
+                            <div className="text-right">
                                 <p className="text-xs text-muted-foreground">Limit</p>
                                 <p className="font-semibold">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(limit)}</p>
                             </div>
                         </div>
-                        <Progress value={progress} className="h-2" />
-                        <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2">
                             {progress < 80 ? <Icons.flame className="h-4 w-4 text-green-500" /> : <Icons.flame className="h-4 w-4 text-orange-500" />}
                             <span>{progress < 80 ? 'Your limit is on track' : 'Whoops! You almost touched your budget'}</span>
                         </div>

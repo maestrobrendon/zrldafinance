@@ -54,24 +54,32 @@ export default function YourGoals({ goals }: YourGoalsProps) {
                         <p className="font-semibold">{item.name}</p>
                         <p className="text-sm font-medium text-muted-foreground">{Math.round(progress)}%</p>
                     </div>
-                    <div>
-                        <p className="text-2xl font-bold">
-                        {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                        }).format(item.balance)}
-                        {item.goalAmount && (
-                             <span className="text-lg font-normal text-muted-foreground">
-                                /{new Intl.NumberFormat("en-US", {
-                                    style: "currency",
-                                    currency: "USD",
-                                    notation: "compact"
-                                }).format(item.goalAmount)}
-                            </span>
-                        )}
-                        </p>
+                    
+                    <div className="space-y-2">
+                        <Progress value={progress} className="h-2" />
+                        <div className="flex justify-between items-center">
+                             <div>
+                                <p className="text-xl font-bold">
+                                    {new Intl.NumberFormat("en-US", {
+                                        style: "currency",
+                                        currency: "USD",
+                                    }).format(item.balance)}
+                                </p>
+                             </div>
+                             <div className="text-right">
+                                {item.goalAmount && (
+                                    <p className="text-sm font-normal text-muted-foreground">
+                                        of {new Intl.NumberFormat("en-US", {
+                                            style: "currency",
+                                            currency: "USD",
+                                            notation: "compact"
+                                        }).format(item.goalAmount)}
+                                    </p>
+                                )}
+                             </div>
+                        </div>
                     </div>
-                    {item.goalAmount && <Progress value={progress} className="h-2" />}
+                    
                     {daysLeft !== null && (
                         <div className="flex justify-end text-xs text-muted-foreground">
                             <span>{daysLeft > 0 ? `${daysLeft} days left` : (progress >= 100 ? 'Completed' : 'Deadline passed')}</span>
