@@ -1,4 +1,5 @@
 
+
 import { Timestamp, collection, writeBatch } from 'firebase/firestore';
 import { Icons } from '@/components/icons';
 import { db } from './firebase';
@@ -268,11 +269,8 @@ export const seedInitialData = async (userId: string) => {
     const batch = writeBatch(db);
     const now = Timestamp.now();
 
-    // Seed Wallets
-    // Note: Budget wallet creation now debits from main balance, so we adjust the seed data.
-    // We will only seed goal wallets to avoid double-counting the balance.
     const walletsCollection = collection(db, 'wallets');
-    initialWallets.filter(w => w.type === 'goal').forEach(wallet => {
+    initialWallets.forEach(wallet => {
         const docRef = collection(walletsCollection).doc();
         batch.set(docRef, {
             ...wallet,
