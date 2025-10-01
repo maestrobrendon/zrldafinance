@@ -18,7 +18,7 @@ import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, serverTimestamp } from "firebase/firestore";
 import { defaultUser, mainBalance, seedInitialData } from "@/lib/data";
 
 async function generateUniqueZtag(name: string): Promise<string> {
@@ -65,9 +65,11 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
+      const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
+      
       await updateProfile(user, {
         displayName: name,
-        photoURL: defaultUser.avatarUrl,
+        photoURL: newPhotoURL,
       });
 
       const ztag = await generateUniqueZtag(name);
@@ -76,11 +78,13 @@ export default function SignupPage() {
         userId: user.uid,
         email: user.email,
         name: name,
-        balance: mainBalance.balance,
+        balance: 15000,
+        zcashBalance: 10000,
         KYC_status: 'Not Verified',
-        photoURL: defaultUser.avatarUrl,
+        photoURL: newPhotoURL,
         ztag: ztag,
         phone: '',
+        createdAt: serverTimestamp(),
         ztagLastUpdated: null
       });
 

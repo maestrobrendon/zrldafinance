@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -36,7 +36,7 @@ import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, Timestamp, writeBatch, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet } from "@/lib/data";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -89,6 +89,7 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<WalletType>("budget");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const budgetForm = useForm<z.infer<typeof budgetWalletSchema>>({
     resolver: zodResolver(budgetWalletSchema),
@@ -129,17 +130,36 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
         toast({ variant: "destructive", title: "Not Authenticated", description: "You must be logged in to create a wallet." });
         return;
     }
+    
+    setIsSubmitting(true);
+    const batch = writeBatch(db);
+    const userDocRef = doc(db, "users", user.uid);
 
     try {
         let walletData: Partial<Wallet>;
+        const newWalletRef = doc(collection(db, 'wallets'));
 
         if (activeTab === 'budget') {
+            const limitAmount = values.limit;
+
+            // Check if main balance is sufficient
+            const userDoc = await getDoc(userDocRef);
+            const mainBalance = userDoc.data()?.balance || 0;
+            if (mainBalance < limitAmount) {
+                toast({ variant: "destructive", title: "Insufficient Funds", description: "Your main wallet balance is too low to create this budget." });
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Debit main balance
+            batch.update(userDocRef, { balance: mainBalance - limitAmount });
+
             walletData = {
                 userId: user.uid,
                 type: 'budget',
                 name: values.name,
-                balance: values.limit, // Set initial balance to the limit for budgets
-                limit: values.limit,
+                balance: limitAmount, // Set initial balance to the limit for budgets
+                limit: limitAmount,
                 spendLimit: values.spendLimit,
                 status: values.isLocked ? 'locked' : 'open',
                 isLocked: values.isLocked,
@@ -160,7 +180,7 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                 balance: 0, // Goals start with 0 balance
                 type: 'goal',
                 name: values.name,
-                status: 'open',
+                status: values.lockOption ? 'locked' : 'open',
                 goalAmount: values.goalAmount,
                 deadline: values.deadline ? Timestamp.fromDate(values.deadline) : undefined,
                 fundingSource: values.fundingSource,
@@ -171,22 +191,19 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                 smartReminders: values.smartReminders,
                 flexContributions: values.flexContributions,
             };
-            if (values.lockOption) { 
-                walletData.status = 'locked';
-            }
         }
 
-        // Remove undefined fields before sending to Firestore
         const cleanedWalletData = Object.fromEntries(
             Object.entries(walletData).filter(([, value]) => value !== undefined)
         );
 
-        const walletsCollection = collection(db, 'wallets');
-        await addDoc(walletsCollection, {
+        batch.set(newWalletRef, {
             ...cleanedWalletData,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
+        
+        await batch.commit();
 
         toast({
             title: "Wallet Created!",
@@ -204,6 +221,8 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
             title: "Creation Failed",
             description: "There was an error creating your wallet. Please try again."
         });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -250,6 +269,7 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                       <FormControl>
                         <Input type="number" placeholder="$200" {...field} />
                       </FormControl>
+                       <FormDescription>This amount will be moved from your main balance.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -504,7 +524,10 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                     <DialogClose asChild>
                         <Button type="button" variant="ghost">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit">Create Budget</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Icons.logo className="mr-2 h-4 w-4 animate-spin" />}
+                        Create Budget
+                    </Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -666,7 +689,10 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                     <DialogClose asChild>
                         <Button type="button" variant="ghost">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit">Create Goal</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Icons.logo className="mr-2 h-4 w-4 animate-spin" />}
+                        Create Goal
+                    </Button>
                  </DialogFooter>
               </form>
             </Form>

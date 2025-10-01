@@ -2,12 +2,12 @@
 "use client";
 
 import * as React from "react";
-import { type Wallet, type Budget, type Goal, mainBalance } from "@/lib/data";
+import { type Wallet, type Budget, type Goal } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import YourBudget from "@/components/wallets/your-budget";
@@ -27,10 +27,19 @@ export default function WalletsPage() {
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [mainBalance, setMainBalance] = React.useState(0);
   
   React.useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
+        // Main balance listener
+        const userDocRef = doc(db, "users", user.uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+            if (doc.exists()) {
+                setMainBalance(doc.data().balance || 0);
+            }
+        });
+        
         const q = query(
             collection(db, "wallets"), 
             where("userId", "==", user.uid),
@@ -57,10 +66,12 @@ export default function WalletsPage() {
         });
 
         return () => {
+            unsubscribeUser();
             unsubscribeWallets();
         };
       } else {
         setWallets([]);
+        setMainBalance(0);
         setLoading(false);
       }
     });
@@ -131,7 +142,7 @@ export default function WalletsPage() {
                     {new Intl.NumberFormat("en-US", {
                     style: "currency",
                     currency: "USD",
-                    }).format(mainBalance.balance)}
+                    }).format(mainBalance)}
                 </p>
                  <p className="text-lg font-semibold text-muted-foreground">USD</p>
                 </div>

@@ -9,6 +9,7 @@ export type UserProfile = {
   email: string;
   name: string;
   balance: number;
+  zcashBalance: number;
   KYC_status: 'Not Verified' | 'Pending' | 'Verified';
   avatarUrl: string;
 };
@@ -122,7 +123,7 @@ export const user = {
 };
 
 export const mainBalance = {
-  balance: 51440.43,
+  balance: 15000,
   currency: 'USD',
 };
 
@@ -256,7 +257,7 @@ export const categories = [
   'Groceries', 'Restaurants', 'Utilities', 'Rent', 'Mortgage', 'Transportation', 'Entertainment', 'Shopping', 'Travel', 'Income', 'Investments', 'Other'
 ];
 
-export const defaultUser: Omit<UserProfile, 'userId' | 'email' | 'balance' | 'KYC_status'> = {
+export const defaultUser: Omit<UserProfile, 'userId' | 'email' | 'balance' | 'KYC_status' | 'zcashBalance'> = {
   name: 'Alex Doe',
   avatarUrl: 'https://picsum.photos/seed/1/100/100',
 };
@@ -267,8 +268,10 @@ export const seedInitialData = async (userId: string) => {
     const now = Timestamp.now();
 
     // Seed Wallets
+    // Note: Budget wallet creation now debits from main balance, so we adjust the seed data.
+    // We will only seed goal wallets to avoid double-counting the balance.
     const walletsCollection = collection(db, 'wallets');
-    initialWallets.forEach(wallet => {
+    initialWallets.filter(w => w.type === 'goal').forEach(wallet => {
         const docRef = collection(walletsCollection).doc();
         batch.set(docRef, {
             ...wallet,

@@ -15,20 +15,72 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "../icons";
+import { type Wallet } from "@/lib/data";
+import { doc, writeBatch, getDoc, collection } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 type WithdrawFundsDialogProps = {
   trigger: React.ReactNode;
-  walletBalance: number;
-  walletName: string;
+  wallet: Wallet;
 };
 
-export function WithdrawFundsDialog({ trigger, walletBalance, walletName }: WithdrawFundsDialogProps) {
+export function WithdrawFundsDialog({ trigger, wallet }: WithdrawFundsDialogProps) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState("form");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSuccess = () => {
-    setStep("success");
+  const handleWithdraw = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const withdrawAmount = parseFloat(amount);
+    if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
+      toast({ variant: 'destructive', title: 'Invalid Amount' });
+      return;
+    }
+    if (withdrawAmount > wallet.balance) {
+      toast({ variant: 'destructive', title: 'Insufficient Funds', description: `Not enough funds in ${wallet.name}.` });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const batch = writeBatch(db);
+
+    // Debit from wallet
+    const walletDocRef = doc(db, 'wallets', wallet.id);
+    batch.update(walletDocRef, { balance: wallet.balance - withdrawAmount });
+
+    // Credit to main balance
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+    const currentMainBalance = userDoc.data()?.balance || 0;
+    batch.update(userDocRef, { balance: currentMainBalance + withdrawAmount });
+
+     // Create a transaction record
+    const transactionRef = doc(collection(db, "transactions"));
+    batch.set(transactionRef, {
+        userId: user.uid,
+        amount: withdrawAmount,
+        type: 'transfer',
+        status: 'completed',
+        timestamp: new Date(),
+        description: `Withdraw from ${wallet.name}`,
+        category: 'Wallet',
+        from: wallet.id,
+    });
+    
+    try {
+        await batch.commit();
+        setStep("success");
+    } catch (error) {
+        console.error("Withdraw funds error:", error);
+        toast({ variant: 'destructive', title: 'Transaction Failed', description: 'An error occurred while withdrawing funds.' });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   const handleClose = () => {
@@ -46,7 +98,7 @@ export function WithdrawFundsDialog({ trigger, walletBalance, walletName }: With
         {step === "form" && (
             <>
                 <DialogHeader>
-                    <DialogTitle>Withdraw from {walletName}</DialogTitle>
+                    <DialogTitle>Withdraw from {wallet.name}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
@@ -60,14 +112,15 @@ export function WithdrawFundsDialog({ trigger, walletBalance, walletName }: With
                         />
                     </div>
                      <div className="text-sm text-muted-foreground">
-                        {walletName} Balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(walletBalance)}
+                        {wallet.name} Balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(wallet.balance)}
                     </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Cancel</Button>
                     </DialogClose>
-                    <Button type="button" disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > walletBalance} onClick={handleSuccess}>
+                    <Button type="button" disabled={isSubmitting || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > wallet.balance} onClick={handleWithdraw}>
+                        {isSubmitting && <Icons.logo className="mr-2 h-4 w-4 animate-spin" />}
                         Withdraw
                     </Button>
                 </DialogFooter>

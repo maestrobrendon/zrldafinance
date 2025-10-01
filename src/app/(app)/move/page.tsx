@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,18 +9,111 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
-import { mainBalance } from "@/lib/data";
 import Link from "next/link";
+import { auth, db } from "@/lib/firebase";
+import type { User } from 'firebase/auth';
+import { collection, onSnapshot, query, where, doc, writeBatch } from "firebase/firestore";
+import { type Wallet } from "@/lib/data";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MovePage() {
+    const { toast } = useToast();
     const [step, setStep] = useState('form'); // form, review, success
     const [fromWalletId, setFromWalletId] = useState<string | null>(null);
     const [toWalletId, setToWalletId] = useState<string | null>(null);
     const [amount, setAmount] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const fromWallet = null; // Replace with actual data fetching
-    const toWallet = null; // Replace with actual data fetching
-    const allWallets: any[] = []; // Replace with actual data fetching
+    const [user, setUser] = useState<User | null>(null);
+    const [mainBalance, setMainBalance] = useState(0);
+    const [allWallets, setAllWallets] = useState<Wallet[]>([]);
+
+    useEffect(() => {
+        const unsubscribeAuth = auth.onAuthStateChanged(firebaseUser => {
+            setUser(firebaseUser);
+            if (firebaseUser) {
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+                    setMainBalance(doc.data()?.balance || 0);
+                });
+
+                const walletsQuery = query(collection(db, "wallets"), where("userId", "==", firebaseUser.uid));
+                const unsubscribeWallets = onSnapshot(walletsQuery, (snapshot) => {
+                    const wallets: Wallet[] = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        wallets.push({
+                            id: doc.id,
+                            ...data,
+                            createdAt: data.createdAt?.toDate(),
+                            updatedAt: data.updatedAt?.toDate(),
+                            deadline: data.deadline?.toDate(),
+                        } as Wallet);
+                    });
+                    setAllWallets(wallets);
+                });
+                return () => {
+                    unsubscribeUser();
+                    unsubscribeWallets();
+                }
+            }
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+    const fromWallet = fromWalletId === 'main' ? { id: 'main', name: 'Main Wallet', balance: mainBalance } : allWallets.find(w => w.id === fromWalletId);
+    const toWallet = toWalletId === 'main' ? { id: 'main', name: 'Main Wallet', balance: mainBalance } : allWallets.find(w => w.id === toWalletId);
+
+    const handleMove = async () => {
+        if (!user || !fromWallet || !toWallet || !amount) return;
+        
+        setIsSubmitting(true);
+        const moveAmount = parseFloat(amount);
+        if (isNaN(moveAmount) || moveAmount <= 0) {
+            toast({ variant: 'destructive', title: 'Invalid Amount' });
+            setIsSubmitting(false);
+            return;
+        }
+
+        const batch = writeBatch(db);
+        const userDocRef = doc(db, "users", user.uid);
+
+        // Debit from source
+        if (fromWallet.id === 'main') {
+            if (mainBalance < moveAmount) {
+                toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'Not enough balance in Main Wallet.' });
+                setIsSubmitting(false);
+                return;
+            }
+            batch.update(userDocRef, { balance: mainBalance - moveAmount });
+        } else {
+            const fromWalletRef = doc(db, 'wallets', fromWallet.id);
+            if (fromWallet.balance < moveAmount) {
+                toast({ variant: 'destructive', title: 'Insufficient Funds', description: `Not enough balance in ${fromWallet.name}.` });
+                setIsSubmitting(false);
+                return;
+            }
+            batch.update(fromWalletRef, { balance: fromWallet.balance - moveAmount });
+        }
+
+        // Credit to destination
+        if (toWallet.id === 'main') {
+            batch.update(userDocRef, { balance: mainBalance + moveAmount });
+        } else {
+            const toWalletRef = doc(db, 'wallets', toWallet.id);
+            batch.update(toWalletRef, { balance: toWallet.balance + moveAmount });
+        }
+        
+        try {
+            await batch.commit();
+            setStep('success');
+        } catch (error) {
+            console.error("Move error:", error);
+            toast({ variant: 'destructive', title: 'Move Failed', description: 'An error occurred during the transfer.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
     
     const renderForm = () => (
          <div className="space-y-6">
@@ -31,26 +124,27 @@ export default function MovePage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <Label>From</Label>
-                        <Select onValueChange={setFromWalletId}>
+                        <Select onValueChange={setFromWalletId} value={fromWalletId || ''}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select source wallet" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="main">Main Wallet ({new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(mainBalance.balance)})</SelectItem>
+                                <SelectItem value="main">Main Wallet ({new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(mainBalance)})</SelectItem>
                                 {allWallets.map(wallet => (
                                     <SelectItem key={wallet.id} value={wallet.id}>{wallet.name} ({new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(wallet.balance)})</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
-                    {fromWallet && <p className="text-sm text-muted-foreground">Available balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format((fromWallet as any).balance)}</p>}
+                    {fromWallet && <p className="text-sm text-muted-foreground">Available balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(fromWallet.balance)}</p>}
                     <div className="space-y-2">
                         <Label>To</Label>
-                        <Select onValueChange={setToWalletId} disabled={!fromWalletId}>
+                        <Select onValueChange={setToWalletId} disabled={!fromWalletId} value={toWalletId || ''}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select destination wallet" />
                             </SelectTrigger>
                             <SelectContent>
+                                 {fromWalletId !== 'main' && <SelectItem value="main">Main Wallet</SelectItem>}
                                 {allWallets.filter(w => w.id !== fromWalletId).map(wallet => (
                                     <SelectItem key={wallet.id} value={wallet.id}>{wallet.name}</SelectItem>
                                 ))}
@@ -82,11 +176,11 @@ export default function MovePage() {
                      <Separator />
                     <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">From</p>
-                         <p className="font-medium">{(fromWallet as any)?.name || 'Main Wallet'}</p>
+                         <p className="font-medium">{fromWallet?.name}</p>
                     </div>
                      <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">To</p>
-                        <p className="font-medium">{(toWallet as any)?.name}</p>
+                        <p className="font-medium">{toWallet?.name}</p>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Fee</span>
@@ -96,7 +190,10 @@ export default function MovePage() {
             </Card>
              <div className="flex gap-4">
                 <Button variant="outline" className="w-full" onClick={() => setStep('form')}>Back</Button>
-                <Button className="w-full" onClick={() => setStep('success')}>Confirm & Move</Button>
+                <Button className="w-full" onClick={handleMove} disabled={isSubmitting}>
+                    {isSubmitting && <Icons.logo className="mr-2 h-4 w-4 animate-spin" />}
+                    Confirm & Move
+                </Button>
             </div>
         </div>
     );
@@ -108,7 +205,7 @@ export default function MovePage() {
             </div>
             <div>
                 <h2 className="text-2xl font-bold">Move Successful!</h2>
-                <p className="text-muted-foreground">You have successfully moved {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))} to {(toWallet as any)?.name}.</p>
+                <p className="text-muted-foreground">You have successfully moved {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))} to {toWallet?.name}.</p>
             </div>
             <Card className="w-full text-left">
                 <CardContent className="pt-6 space-y-4">
@@ -118,15 +215,15 @@ export default function MovePage() {
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">From</span>
-                        <span className="font-medium">{(fromWallet as any)?.name || 'Main Wallet'}</span>
+                        <span className="font-medium">{fromWallet?.name || 'Main Wallet'}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">To</span>
-                        <span className="font-medium">{(toWallet as any)?.name}</span>
+                        <span className="font-medium">{toWallet?.name}</span>
                     </div>
                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Transaction ID</span>
-                        <span className="font-medium">TXM123456789</span>
+                        <span className="font-medium">TXM{Date.now()}</span>
                     </div>
                 </CardContent>
             </Card>

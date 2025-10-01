@@ -7,7 +7,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { type Wallet, type Transaction, mainBalance } from "@/lib/data";
+import { type Wallet, type Transaction } from "@/lib/data";
 import { Progress } from "@/components/ui/progress";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { Icons } from "@/components/icons";
@@ -18,8 +18,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AddFundsDialog } from "@/components/wallets/add-funds-dialog";
 import { WithdrawFundsDialog } from "@/components/wallets/withdraw-funds-dialog";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, onSnapshot, collection, query, where, orderBy } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import type { User } from "firebase/auth";
 
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
@@ -38,7 +39,7 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
 
 const groupTransactionsByMonth = (transactions: Transaction[]) => {
   return transactions.reduce((acc, transaction) => {
-    const month = format(parseISO(transaction.date), 'MMMM, yyyy');
+    const month = format(new Date(transaction.date), 'MMMM, yyyy');
     if (!acc[month]) {
       acc[month] = [];
     }
@@ -51,11 +52,30 @@ export default function WalletDetailPage() {
   const params = useParams();
   const walletId = params.walletId as string;
   const [wallet, setWallet] = React.useState<Wallet | null>(null);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [mainBalance, setMainBalance] = React.useState(0);
+  const [itemTransactions, setItemTransactions] = React.useState<Transaction[]>([]);
+  
+  React.useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
+        setUser(firebaseUser);
+        if (firebaseUser) {
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            onSnapshot(userDocRef, (doc) => {
+                if (doc.exists()) {
+                    setMainBalance(doc.data().balance || 0);
+                }
+            });
+        }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
   
   React.useEffect(() => {
     if (walletId) {
       const walletDocRef = doc(db, 'wallets', walletId);
-      const unsubscribe = onSnapshot(walletDocRef, (doc) => {
+      const unsubscribeWallet = onSnapshot(walletDocRef, (doc) => {
         if (doc.exists()) {
           const data = doc.data();
           setWallet({
@@ -69,9 +89,36 @@ export default function WalletDetailPage() {
           setWallet(null);
         }
       });
-      return () => unsubscribe();
+
+      // Fetch transactions related to this wallet.
+      // This is a simplified query; a real app might need more complex logic
+      // to associate transactions with wallets (e.g., a walletId field on transactions).
+      const transactionsQuery = query(
+          collection(db, "transactions"),
+          where("userId", "==", user?.uid || ""),
+          where("description", "==", `Contribution to ${wallet?.name}`), // Example filter
+          orderBy("timestamp", "desc")
+      );
+      const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+          const transactions: Transaction[] = [];
+          snapshot.forEach(doc => {
+              const data = doc.data();
+              transactions.push({
+                  id: doc.id,
+                  ...data,
+                  timestamp: data.timestamp.toDate(),
+                  date: data.timestamp.toDate().toISOString(),
+              } as Transaction);
+          });
+          setItemTransactions(transactions);
+      });
+
+      return () => {
+          unsubscribeWallet();
+          unsubscribeTransactions();
+      };
     }
-  }, [walletId]);
+  }, [walletId, user, wallet?.name]);
 
   if (!wallet) {
     return (
@@ -90,34 +137,6 @@ export default function WalletDetailPage() {
                    isBudget && wallet.limit ? (wallet.balance / wallet.limit) * 100 : 0;
   const daysLeft = isGoal && wallet.deadline ? differenceInDays(wallet.deadline, new Date()) : null;
 
-
-  // Mock data for transactions - replace with actual transaction fetching logic
-  const itemTransactions: Transaction[] = [
-    {
-      id: "t1",
-      transactionId: 't1',
-      userId: 'u1',
-      date: "2024-07-28T10:00:00.000Z",
-      description: "Contribution",
-      amount: 100,
-      type: "contribution",
-      status: "completed",
-      category: "Wallet",
-      timestamp: new Date()
-    },
-    {
-      id: "t2",
-      transactionId: 't2',
-      userId: 'u1',
-      date: "2024-07-25T14:30:00.000Z",
-      description: "Payment for concert tickets",
-      amount: 75,
-      type: "payment",
-      status: "completed",
-      category: "Entertainment",
-      timestamp: new Date()
-    },
-  ];
   const groupedTransactions = groupTransactionsByMonth(itemTransactions);
 
 
@@ -159,8 +178,8 @@ export default function WalletDetailPage() {
                             <span className="text-sm font-medium">Add Funds</span>
                         </div>
                     }
-                    mainBalance={mainBalance.balance}
-                    walletName={wallet.name}
+                    mainBalance={mainBalance}
+                    wallet={wallet}
                 />
                 {wallet.status !== 'locked' && (
                     <WithdrawFundsDialog 
@@ -172,8 +191,7 @@ export default function WalletDetailPage() {
                                 <span className="text-sm font-medium">Withdraw</span>
                             </div>
                         }
-                        walletBalance={wallet.balance}
-                        walletName={wallet.name}
+                        wallet={wallet}
                     />
                 )}
                 <div className="flex flex-col items-center gap-2">
@@ -273,7 +291,7 @@ export default function WalletDetailPage() {
                                             <div>
                                                 <p className="font-medium">{activity.description}</p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {format(parseISO(activity.date), 'MMM d, hh:mm a')}
+                                                    {format(new Date(activity.date), 'MMM d, hh:mm a')}
                                                 </p>
                                             </div>
                                         </div>
