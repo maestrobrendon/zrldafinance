@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
 import { auth, db } from "@/lib/firebase";
 import type { User } from 'firebase/auth';
-import { collection, onSnapshot, query, where, doc, orderBy, limit } from "firebase/firestore";
+import { collection, onSnapshot, query, where, doc, orderBy, limit, setDoc } from "firebase/firestore";
 import AnalyticsSection from "@/components/dashboard/analytics-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import YourBudget from "@/components/wallets/your-budget";
@@ -56,9 +56,19 @@ export default function DashboardPage() {
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
                 if (doc.exists()) {
-                    setMainBalance(doc.data().balance ?? 0);
+                    const data = doc.data();
+                    if (data.balance === undefined || data.balance === null) {
+                        // One-time fix for existing users with no balance
+                        setDoc(userDocRef, { balance: 50000 }, { merge: true });
+                        setMainBalance(50000);
+                    } else {
+                        setMainBalance(data.balance);
+                    }
                 } else {
-                    setMainBalance(0);
+                    // This case should ideally not happen for a logged-in user
+                    // but as a fallback, we can create the doc.
+                    setDoc(userDocRef, { balance: 50000 }, { merge: true });
+                    setMainBalance(50000);
                 }
             });
 
