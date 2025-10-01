@@ -12,7 +12,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { auth, db } from "@/lib/firebase";
 import type { User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, limit, doc } from "firebase/firestore";
 
 
 const favoritePeople = [
@@ -27,17 +27,23 @@ export default function ZCashPage() {
   const [showRequest, setShowRequest] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [zcashBalance, setZcashBalance] = useState(10000); // Placeholder
+  const [zcashBalance, setZcashBalance] = useState(0); 
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
         setUser(firebaseUser);
         if (firebaseUser) {
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+                if (doc.exists()) {
+                    setZcashBalance(doc.data().zcashBalance || 0);
+                }
+            });
+
             const q = query(
-                collection(db, "transactions"), 
-                where("userId", "==", firebaseUser.uid),
+                collection(db, "users", firebaseUser.uid, "transactions"), 
                 orderBy("timestamp", "desc"),
-                limit(10) // Fetch a bit more to have enough after filtering
+                limit(5)
             );
             const unsubscribeTransactions = onSnapshot(q, (querySnapshot) => {
                 const userTransactions: Transaction[] = [];
@@ -50,15 +56,19 @@ export default function ZCashPage() {
                         date: data.timestamp?.toDate().toISOString(),
                     } as Transaction);
                 });
-                // Filter out income and take the first 5 for the zcash page
-                const filtered = userTransactions.filter(tx => tx.type !== 'income').slice(0, 5);
+                
+                const filtered = userTransactions.filter(tx => tx.type !== 'income');
                 setRecentTransactions(filtered);
             }, (error) => {
                 console.error("Error fetching transactions for ZCash page:", error);
             });
-            return () => unsubscribeTransactions();
+            return () => {
+                unsubscribeUser();
+                unsubscribeTransactions();
+            };
         } else {
             setRecentTransactions([]);
+            setZcashBalance(0);
         }
     });
     
@@ -172,7 +182,7 @@ export default function ZCashPage() {
         <Card>
             <CardContent className="p-0">
                {recentTransactions.length > 0 ? (
-                <div className="space-y-4">
+                <div className="divide-y divide-border">
                 {recentTransactions.map((transaction, index) => (
                     <div key={transaction.id}>
                         <div className="flex items-center justify-between p-4">
@@ -195,7 +205,6 @@ export default function ZCashPage() {
                                 }).format(transaction.amount)}
                             </p>
                         </div>
-                         {index < recentTransactions.length - 1 && <Separator />}
                     </div>
                 ))}
                 </div>
@@ -227,3 +236,5 @@ export default function ZCashPage() {
     </div>
   );
 }
+
+    

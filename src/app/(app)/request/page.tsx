@@ -12,7 +12,7 @@ import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import type { User } from "firebase/auth";
 
 const zrldaFriends = [
@@ -32,14 +32,16 @@ export default function RequestPage() {
 
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+        const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
             setUser(firebaseUser);
             if (firebaseUser) {
                 const userDocRef = doc(db, "users", firebaseUser.uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    setZcashBalance(userDoc.data().zcashBalance || 0);
-                }
+                const unsubscribeUser = onSnapshot(userDocRef, (userDoc) => {
+                    if (userDoc.exists()) {
+                        setZcashBalance(userDoc.data().zcashBalance || 0);
+                    }
+                });
+                return () => unsubscribeUser();
             }
         });
         return () => unsubscribe();
@@ -209,5 +211,7 @@ export default function RequestPage() {
         </div>
     );
 }
+
+    
 
     
