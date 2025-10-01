@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, getDocs, collection, query, where, serverTimestamp } from "firebase/firestore";
-import { defaultUser, mainBalance, seedInitialData } from "@/lib/data";
+import { seedInitialData } from "@/lib/data";
 
 async function generateUniqueZtag(name: string): Promise<string> {
     let ztag = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
@@ -154,3 +154,5 @@ export default function SignupPage() {
     </>
   );
 }
+
+    

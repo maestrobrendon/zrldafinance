@@ -27,7 +27,7 @@ export default function WalletsPage() {
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [mainBalance, setMainBalance] = React.useState(0);
+  const [mainBalance, setMainBalance] = React.useState<number | null>(null);
   
   React.useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
@@ -36,7 +36,9 @@ export default function WalletsPage() {
         const userDocRef = doc(db, "users", user.uid);
         const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
             if (doc.exists()) {
-                setMainBalance(doc.data().balance || 0);
+                setMainBalance(doc.data().balance);
+            } else {
+                setMainBalance(0);
             }
         });
         
@@ -138,12 +140,16 @@ export default function WalletsPage() {
                 Total balance
                 </p>
                 <div className="flex items-baseline justify-center gap-2">
-                <p className="text-4xl font-bold tracking-tighter">
-                    {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                    }).format(mainBalance)}
-                </p>
+                 {mainBalance === null ? (
+                    <p className="text-4xl font-bold tracking-tighter">Loading...</p>
+                 ) : (
+                    <p className="text-4xl font-bold tracking-tighter">
+                        {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        }).format(mainBalance)}
+                    </p>
+                 )}
                  <p className="text-lg font-semibold text-muted-foreground">USD</p>
                 </div>
             </CardContent>
@@ -170,3 +176,5 @@ export default function WalletsPage() {
 }
 
   
+
+    

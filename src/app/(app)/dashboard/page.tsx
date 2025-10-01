@@ -44,7 +44,7 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
 export default function DashboardPage() {
   const [showBanner, setShowBanner] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
-  const [mainBalance, setMainBalance] = useState(0);
+  const [mainBalance, setMainBalance] = useState<number | null>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
@@ -56,7 +56,9 @@ export default function DashboardPage() {
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
                 if (doc.exists()) {
-                    setMainBalance(doc.data().balance || 0);
+                    setMainBalance(doc.data().balance);
+                } else {
+                    setMainBalance(0);
                 }
             });
 
@@ -164,12 +166,16 @@ export default function DashboardPage() {
               Total balance
               </p>
               <div className="flex items-baseline justify-center gap-2">
-              <p className="text-4xl font-bold tracking-tighter">
-                  {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                  }).format(mainBalance)}
-              </p>
+                {mainBalance === null ? (
+                    <p className="text-4xl font-bold tracking-tighter">Loading...</p>
+                ) : (
+                    <p className="text-4xl font-bold tracking-tighter">
+                        {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        }).format(mainBalance)}
+                    </p>
+                )}
               </div>
           </CardContent>
       </Card>
@@ -325,3 +331,5 @@ export default function DashboardPage() {
 }
 
   
+
+    
