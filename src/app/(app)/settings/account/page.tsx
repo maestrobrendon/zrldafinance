@@ -20,7 +20,7 @@ export default function AccountSettingsPage() {
     const [email, setEmail] = useState("");
     const [ztag, setZtag] = useState("");
     const [phone, setPhone] = useState("");
-    const [avatarUrl, setAvatarUrl] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState<string | undefined>('');
     const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,7 +32,7 @@ export default function AccountSettingsPage() {
             if (user) {
                 setName(user.displayName || "");
                 setEmail(user.email || "");
-                setAvatarUrl(user.photoURL || '');
+                setAvatarUrl(user.photoURL || undefined);
 
                 // Fetch additional user data from Firestore
                 const userDocRef = doc(db, "users", user.uid);
@@ -148,7 +148,7 @@ export default function AccountSettingsPage() {
                 <CardContent className="space-y-6">
                     <div className="flex items-center gap-4">
                          <Avatar className="h-20 w-20 cursor-pointer" onClick={handleAvatarClick}>
-                            <AvatarImage src={avatarUrl} alt={name} />
+                            <AvatarImage src={avatarUrl || undefined} alt={name} />
                             <AvatarFallback>{name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <input

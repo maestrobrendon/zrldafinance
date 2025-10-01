@@ -40,7 +40,7 @@ export default function SettingsPage() {
   };
 
   const displayName = user?.displayName || "User";
-  const photoURL = user?.photoURL || "";
+  const photoURL = user?.photoURL;
 
 
   return (
@@ -59,7 +59,7 @@ export default function SettingsPage() {
         
       <div className="flex flex-col items-center space-y-4 text-center">
           <Avatar className="h-24 w-24 border-4 border-primary/20">
-              <AvatarImage src={photoURL} alt={displayName} data-ai-hint="avatar" />
+              <AvatarImage src={photoURL || undefined} alt={displayName} data-ai-hint="avatar" />
               <AvatarFallback>{displayName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
           </Avatar>
           <div>

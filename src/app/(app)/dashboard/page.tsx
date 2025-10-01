@@ -141,7 +141,7 @@ export default function DashboardPage() {
   }, []);
 
   const displayName = user?.displayName || "User";
-  const photoURL = user?.photoURL || "";
+  const photoURL = user?.photoURL;
 
   const budgets = wallets.filter(w => w.type === 'budget') as Budget[];
   const goals = wallets.filter(w => w.type === 'goal') as Goal[];
@@ -151,7 +151,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
          <Link href="/settings">
             <Avatar className="h-10 w-10">
-            <AvatarImage src={photoURL} alt={displayName} data-ai-hint="avatar" />
+            <AvatarImage src={photoURL || undefined} alt={displayName} data-ai-hint="avatar" />
             <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
             </Avatar>
         </Link>

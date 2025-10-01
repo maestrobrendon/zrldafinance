@@ -40,7 +40,7 @@ export default function AppSidebar() {
 
   const displayName = user?.displayName || "User";
   const displayEmail = user?.email || "";
-  const photoURL = user?.photoURL || "";
+  const photoURL = user?.photoURL;
 
   return (
     <Sidebar className="hidden md:flex">
@@ -72,7 +72,7 @@ export default function AppSidebar() {
          <Link href="/settings" className="block w-full">
             <div className="flex items-center gap-3 p-2 rounded-md hover:bg-accent">
                 <Avatar className="h-9 w-9">
-                <AvatarImage src={photoURL} alt={displayName} data-ai-hint="avatar" />
+                <AvatarImage src={photoURL || undefined} alt={displayName} data-ai-hint="avatar" />
                 <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="overflow-hidden">
