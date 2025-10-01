@@ -66,63 +66,60 @@ export default function WalletDetailPage() {
                     setMainBalance(doc.data().balance || 0);
                 }
             });
+            if (walletId) {
+                const walletDocRef = doc(db, 'wallets', walletId);
+                const unsubscribeWallet = onSnapshot(walletDocRef, (doc) => {
+                    if (doc.exists()) {
+                    const data = doc.data();
+                    setWallet({
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt?.toDate(),
+                        updatedAt: data.updatedAt?.toDate(),
+                        deadline: data.deadline?.toDate(),
+                    } as Wallet);
+                    } else {
+                    setWallet(null);
+                    }
+                });
+
+                const transactionsQuery = query(
+                    collection(db, "transactions"),
+                    where("userId", "==", firebaseUser.uid),
+                    where("walletId", "==", walletId),
+                    orderBy("timestamp", "desc")
+                );
+                const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+                    const transactions: Transaction[] = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        transactions.push({
+                            id: doc.id,
+                            ...data,
+                            timestamp: data.timestamp.toDate(),
+                            date: data.timestamp.toDate().toISOString(),
+                        } as Transaction);
+                    });
+                    setItemTransactions(transactions);
+                });
+
+                return () => {
+                    unsubscribeWallet();
+                    unsubscribeTransactions();
+                };
+            }
         }
     });
 
     return () => unsubscribeAuth();
-  }, []);
-  
-  React.useEffect(() => {
-    if (walletId) {
-      const walletDocRef = doc(db, 'wallets', walletId);
-      const unsubscribeWallet = onSnapshot(walletDocRef, (doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          setWallet({
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate(),
-            updatedAt: data.updatedAt?.toDate(),
-            deadline: data.deadline?.toDate(),
-          } as Wallet);
-        } else {
-          setWallet(null);
-        }
-      });
-
-      const transactionsQuery = query(
-          collection(db, "transactions"),
-          where("walletId", "==", walletId),
-          orderBy("timestamp", "desc")
-      );
-      const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-          const transactions: Transaction[] = [];
-          snapshot.forEach(doc => {
-              const data = doc.data();
-              transactions.push({
-                  id: doc.id,
-                  ...data,
-                  timestamp: data.timestamp.toDate(),
-                  date: data.timestamp.toDate().toISOString(),
-              } as Transaction);
-          });
-          setItemTransactions(transactions);
-      });
-
-      return () => {
-          unsubscribeWallet();
-          unsubscribeTransactions();
-      };
-    }
   }, [walletId]);
 
   if (!wallet) {
     return (
       <div className="space-y-8 p-4 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-destructive">Wallet not found or loading...</h1>
-        <Button asChild>
-            <Link href="/wallets">Go Back to Wallets</Link>
-        </Button>
+        <div className="flex items-center justify-center py-10">
+            <Icons.logo className="h-8 w-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
