@@ -95,8 +95,3 @@ export default function PreferencesSettingsPage() {
         </div>
     )
 }
-
-// Add these icons to lucide-react imports if they don't exist
-import { Sun, Moon, Laptop } from "lucide-react";
-// And to the Icons object
-// sun: Sun, moon: Moon, laptop: Laptop

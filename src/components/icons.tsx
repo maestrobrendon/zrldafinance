@@ -49,6 +49,9 @@ import {
   Shield,
   SlidersHorizontal,
   Download,
+  Sun,
+  Moon,
+  Laptop,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -157,4 +160,7 @@ export const Icons = {
   'user-cog': UserCog,
   shield: Shield,
   'sliders-horizontal': SlidersHorizontal,
+  sun: Sun,
+  moon: Moon,
+  laptop: Laptop,
 };
