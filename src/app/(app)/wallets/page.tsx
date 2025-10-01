@@ -16,13 +16,6 @@ import TopGoals from "@/components/wallets/top-goals";
 import Link from "next/link";
 
 
-const quickActions = [
-    { label: "Add", icon: Icons.add, href: "/top-up" },
-    { label: "Transfer", icon: Icons['send-2'], href: "/send" },
-    { label: "Move", icon: Icons.move, href: "/move" },
-];
-
-
 export default function WalletsPage() {
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -155,28 +148,34 @@ export default function WalletsPage() {
             </CardContent>
         </Card>
 
-         <div className="grid grid-cols-3 gap-4">
-            {quickActions.map((action) => (
-                <Link href={action.href} key={action.label} className="flex flex-col items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
-                    >
-                        <action.icon className="h-6 w-6 text-primary" />
-                    </Button>
-                    <span className="text-sm font-medium">{action.label}</span>
-                </Link>
-            ))}
+         <div className="grid grid-cols-2 gap-4">
+            <CreateWalletDialog 
+                trigger={
+                    <div className="flex flex-col items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
+                        >
+                            <Icons.add className="h-6 w-6 text-primary" />
+                        </Button>
+                        <span className="text-sm font-medium">Add</span>
+                    </div>
+                }
+            />
+             <Link href="/move" className="flex flex-col items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="w-16 h-16 rounded-full bg-card hover:bg-primary/10"
+                >
+                    <Icons.move className="h-6 w-6 text-primary" />
+                </Button>
+                <span className="text-sm font-medium">Move</span>
+            </Link>
         </div>
 
       {renderContent()}
     </div>
   );
 }
-
-  
-
-    
-
-    

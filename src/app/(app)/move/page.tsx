@@ -61,7 +61,8 @@ export default function MovePage() {
         return () => unsubscribeAuth();
     }, []);
 
-    const fromWallet = fromWalletId === 'main' ? { id: 'main', name: 'Main Wallet', balance: mainBalance } : allWallets.find(w => w.id === fromWalletId);
+    const fromWallets = allWallets.filter(w => w.status !== 'locked');
+    const fromWallet = fromWalletId === 'main' ? { id: 'main', name: 'Main Wallet', balance: mainBalance } : fromWallets.find(w => w.id === fromWalletId);
     const toWallet = toWalletId === 'main' ? { id: 'main', name: 'Main Wallet', balance: mainBalance } : allWallets.find(w => w.id === toWalletId);
 
     const handleMove = async () => {
@@ -77,31 +78,32 @@ export default function MovePage() {
 
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", user.uid);
+        
+        const fromBalance = fromWallet.id === 'main' ? mainBalance : fromWallet.balance;
+         if (fromBalance < moveAmount) {
+            toast({ variant: 'destructive', title: 'Insufficient Funds', description: `Not enough balance in ${fromWallet.name}.` });
+            setIsSubmitting(false);
+            return;
+        }
 
         // Debit from source
         if (fromWallet.id === 'main') {
-            if (mainBalance < moveAmount) {
-                toast({ variant: 'destructive', title: 'Insufficient Funds', description: 'Not enough balance in Main Wallet.' });
-                setIsSubmitting(false);
-                return;
-            }
             batch.update(userDocRef, { balance: mainBalance - moveAmount });
         } else {
             const fromWalletRef = doc(db, 'wallets', fromWallet.id);
-            if (fromWallet.balance < moveAmount) {
-                toast({ variant: 'destructive', title: 'Insufficient Funds', description: `Not enough balance in ${fromWallet.name}.` });
-                setIsSubmitting(false);
-                return;
-            }
             batch.update(fromWalletRef, { balance: fromWallet.balance - moveAmount });
         }
 
         // Credit to destination
         if (toWallet.id === 'main') {
-            batch.update(userDocRef, { balance: mainBalance + moveAmount });
+             const userDoc = await doc(db, "users", user.uid).get();
+             const currentMainBalance = userDoc.data()?.balance || 0;
+            batch.update(userDocRef, { balance: currentMainBalance + moveAmount });
         } else {
             const toWalletRef = doc(db, 'wallets', toWallet.id);
-            batch.update(toWalletRef, { balance: toWallet.balance + moveAmount });
+            const toWalletDoc = await toWalletRef.get();
+            const currentToBalance = toWalletDoc.data()?.balance || 0;
+            batch.update(toWalletRef, { balance: currentToBalance + moveAmount });
         }
         
         try {
@@ -130,13 +132,13 @@ export default function MovePage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="main">Main Wallet ({new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(mainBalance)})</SelectItem>
-                                {allWallets.map(wallet => (
+                                {fromWallets.map(wallet => (
                                     <SelectItem key={wallet.id} value={wallet.id}>{wallet.name} ({new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(wallet.balance)})</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
-                    {fromWallet && <p className="text-sm text-muted-foreground">Available balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(fromWallet.balance)}</p>}
+                    {fromWallet && <p className="text-sm text-muted-foreground">Available balance: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(fromWallet.id === 'main' ? mainBalance : fromWallet.balance)}</p>}
                     <div className="space-y-2">
                         <Label>To</Label>
                         <Select onValueChange={setToWalletId} disabled={!fromWalletId} value={toWalletId || ''}>
