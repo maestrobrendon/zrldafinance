@@ -36,7 +36,7 @@ export default function WalletsPage() {
         const userDocRef = doc(db, "users", user.uid);
         const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
             if (doc.exists()) {
-                setMainBalance(doc.data().balance);
+                setMainBalance(doc.data().balance ?? 0);
             } else {
                 setMainBalance(0);
             }
@@ -140,7 +140,7 @@ export default function WalletsPage() {
                 Total balance
                 </p>
                 <div className="flex items-baseline justify-center gap-2">
-                 {mainBalance === null ? (
+                 {mainBalance === null || typeof mainBalance !== 'number' ? (
                     <p className="text-4xl font-bold tracking-tighter">Loading...</p>
                  ) : (
                     <p className="text-4xl font-bold tracking-tighter">
@@ -176,5 +176,7 @@ export default function WalletsPage() {
 }
 
   
+
+    
 
     

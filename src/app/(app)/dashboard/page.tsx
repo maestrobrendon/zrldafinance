@@ -56,7 +56,7 @@ export default function DashboardPage() {
             const userDocRef = doc(db, "users", firebaseUser.uid);
             const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
                 if (doc.exists()) {
-                    setMainBalance(doc.data().balance);
+                    setMainBalance(doc.data().balance ?? 0);
                 } else {
                     setMainBalance(0);
                 }
@@ -106,7 +106,7 @@ export default function DashboardPage() {
                         timestamp: data.timestamp.toDate(),
                         date: data.timestamp.toDate().toISOString(),
                     } as Transaction);
-                });
+});
                 setRecentTransactions(transactions);
             }, (error) => {
                 console.error("Error fetching transactions:", error);
@@ -166,7 +166,7 @@ export default function DashboardPage() {
               Total balance
               </p>
               <div className="flex items-baseline justify-center gap-2">
-                {mainBalance === null ? (
+                {mainBalance === null || typeof mainBalance !== 'number' ? (
                     <p className="text-4xl font-bold tracking-tighter">Loading...</p>
                 ) : (
                     <p className="text-4xl font-bold tracking-tighter">
@@ -331,5 +331,7 @@ export default function DashboardPage() {
 }
 
   
+
+    
 
     
