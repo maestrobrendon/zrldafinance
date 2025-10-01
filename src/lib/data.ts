@@ -1,6 +1,6 @@
 
 
-import { Timestamp, collection, writeBatch } from 'firebase/firestore';
+import { Timestamp, collection, writeBatch, doc } from 'firebase/firestore';
 import { Icons } from '@/components/icons';
 import { db } from './firebase';
 
@@ -36,7 +36,6 @@ export type Transaction = {
 
 export type Wallet = {
   id: string;
-  userId: string;
   type: 'budget' | 'goal';
   name: string;
   balance: number;
@@ -268,26 +267,24 @@ export const defaultUser: Omit<UserProfile, 'userId' | 'email' | 'balance' | 'KY
 export const seedInitialData = async (userId: string) => {
     const batch = writeBatch(db);
     const now = Timestamp.now();
+    const userDocRef = doc(db, 'users', userId);
 
-    const walletsCollection = collection(db, 'wallets');
+    const walletsCollectionRef = collection(userDocRef, 'wallets');
     initialWallets.forEach(wallet => {
-        const docRef = collection(walletsCollection).doc();
+        const docRef = doc(walletsCollectionRef); // Create a new doc in the subcollection
         batch.set(docRef, {
             ...wallet,
-            userId: userId,
             createdAt: now,
             updatedAt: now,
             deadline: wallet.deadline ? Timestamp.fromDate(wallet.deadline) : undefined,
         });
     });
 
-    // Seed Transactions
-    const transactionsCollection = collection(db, 'transactions');
+    const transactionsCollectionRef = collection(userDocRef, 'transactions');
     initialTransactions.forEach(tx => {
-        const docRef = collection(transactionsCollection).doc();
+        const docRef = doc(transactionsCollectionRef); // Create a new doc in the subcollection
         batch.set(docRef, {
             ...tx,
-            userId: userId,
             transactionId: `txn_${docRef.id}`,
             timestamp: Timestamp.fromDate(new Date(tx.date)),
         });

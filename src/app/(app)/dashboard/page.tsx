@@ -52,30 +52,26 @@ export default function DashboardPage() {
     const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
         setUser(firebaseUser);
         if (firebaseUser) {
-            // Main balance listener
             const userDocRef = doc(db, "users", firebaseUser.uid);
+
             const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
                 if (doc.exists()) {
                     const data = doc.data();
                     if (data.balance === undefined || data.balance === null) {
-                        // One-time fix for existing users with no balance
                         setDoc(userDocRef, { balance: 50000 }, { merge: true });
                         setMainBalance(50000);
                     } else {
                         setMainBalance(data.balance);
                     }
                 } else {
-                    // This case should ideally not happen for a logged-in user
-                    // but as a fallback, we can create the doc.
                     setDoc(userDocRef, { balance: 50000 }, { merge: true });
                     setMainBalance(50000);
                 }
             });
 
-            // Wallets listener
+            // Wallets listener (subcollection)
             const walletsQuery = query(
-                collection(db, "wallets"), 
-                where("userId", "==", firebaseUser.uid), 
+                collection(db, "users", firebaseUser.uid, "wallets"), 
                 orderBy("createdAt", "desc"), 
                 limit(6)
             );
@@ -99,10 +95,9 @@ export default function DashboardPage() {
                 }
             });
 
-            // Transactions listener
+            // Transactions listener (subcollection)
             const transactionsQuery = query(
-                collection(db, "transactions"), 
-                where("userId", "==", firebaseUser.uid), 
+                collection(db, "users", firebaseUser.uid, "transactions"), 
                 orderBy("timestamp", "desc"), 
                 limit(4)
             );
@@ -116,7 +111,7 @@ export default function DashboardPage() {
                         timestamp: data.timestamp.toDate(),
                         date: data.timestamp.toDate().toISOString(),
                     } as Transaction);
-});
+                });
                 setRecentTransactions(transactions);
             }, (error) => {
                 console.error("Error fetching transactions:", error);
@@ -176,7 +171,7 @@ export default function DashboardPage() {
               Total balance
               </p>
               <div className="flex items-baseline justify-center gap-2">
-                {mainBalance === null || typeof mainBalance !== 'number' ? (
+                {mainBalance === null ? (
                     <p className="text-4xl font-bold tracking-tighter">Loading...</p>
                 ) : (
                     <p className="text-4xl font-bold tracking-tighter">
@@ -339,5 +334,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

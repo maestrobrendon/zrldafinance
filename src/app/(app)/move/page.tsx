@@ -37,7 +37,7 @@ export default function MovePage() {
                     setMainBalance(doc.data()?.balance || 0);
                 });
 
-                const walletsQuery = query(collection(db, "wallets"), where("userId", "==", firebaseUser.uid));
+                const walletsQuery = query(collection(userDocRef, "wallets"));
                 const unsubscribeWallets = onSnapshot(walletsQuery, (snapshot) => {
                     const wallets: Wallet[] = [];
                     snapshot.forEach(doc => {
@@ -90,18 +90,18 @@ export default function MovePage() {
         if (fromWallet.id === 'main') {
             batch.update(userDocRef, { balance: mainBalance - moveAmount });
         } else {
-            const fromWalletRef = doc(db, 'wallets', fromWallet.id);
+            const fromWalletRef = doc(userDocRef, 'wallets', fromWallet.id);
             batch.update(fromWalletRef, { balance: fromWallet.balance - moveAmount });
         }
 
         // Credit to destination
         if (toWallet.id === 'main') {
-             const userDoc = await doc(db, "users", user.uid).get();
+             const userDoc = await getDoc(userDocRef);
              const currentMainBalance = userDoc.data()?.balance || 0;
             batch.update(userDocRef, { balance: currentMainBalance + moveAmount });
         } else {
-            const toWalletRef = doc(db, 'wallets', toWallet.id);
-            const toWalletDoc = await toWalletRef.get();
+            const toWalletRef = doc(userDocRef, 'wallets', toWallet.id);
+            const toWalletDoc = await getDoc(toWalletRef);
             const currentToBalance = toWalletDoc.data()?.balance || 0;
             batch.update(toWalletRef, { balance: currentToBalance + moveAmount });
         }

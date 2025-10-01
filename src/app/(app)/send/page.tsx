@@ -100,16 +100,15 @@ export default function SendPage() {
             batch.update(userDocRef, { balance: mainBalance - sendAmount });
         }
 
-        const transactionRef = doc(collection(db, "transactions"));
+        const transactionRef = doc(collection(userDocRef, "transactions"));
         batch.set(transactionRef, {
-            userId: user.uid,
             amount: sendAmount,
             type: 'payment',
             status: 'completed',
             timestamp: new Date(),
             description: `Sent to ${selectedFriend.name}`,
             category: 'Wallet',
-            to: selectedFriend.handle,
+            toUser: selectedFriend.handle,
             note: note,
         });
 
@@ -371,5 +370,3 @@ export default function SendPage() {
         </div>
     );
 }
-
-    

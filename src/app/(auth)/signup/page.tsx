@@ -80,11 +80,12 @@ export default function SignupPage() {
         name: name,
         balance: 50000,
         zcashBalance: 10000,
-        KYC_status: 'Not Verified',
+        kycStatus: 'Not Verified',
         photoURL: newPhotoURL,
         ztag: ztag,
         phone: '',
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         ztagLastUpdated: null
       });
 
@@ -104,6 +105,7 @@ export default function SignupPage() {
           break;
         default:
           setError('An unexpected error occurred. Please try again.');
+          console.error("Signup error:", error);
           break;
       }
     } finally {
@@ -154,5 +156,3 @@ export default function SignupPage() {
     </>
   );
 }
-
-    

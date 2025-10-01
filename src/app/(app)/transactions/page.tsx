@@ -7,7 +7,7 @@ import { Icons } from "@/components/icons";
 import { type Transaction } from "@/lib/data";
 import { format } from "date-fns";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
   Entertainment: Icons.entertainment,
@@ -41,8 +41,7 @@ export default function TransactionsPage() {
         const unsubscribe = auth.onAuthStateChanged(user => {
             if (user) {
                 const q = query(
-                    collection(db, "transactions"),
-                    where("userId", "==", user.uid),
+                    collection(db, "users", user.uid, "transactions"),
                     orderBy("timestamp", "desc")
                 );
 
@@ -153,5 +152,3 @@ export default function TransactionsPage() {
         </div>
     );
 }
-
-    

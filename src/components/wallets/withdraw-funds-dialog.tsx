@@ -48,21 +48,20 @@ export function WithdrawFundsDialog({ trigger, wallet }: WithdrawFundsDialogProp
 
     setIsSubmitting(true);
     const batch = writeBatch(db);
+    const userDocRef = doc(db, "users", user.uid);
 
     // Debit from wallet
-    const walletDocRef = doc(db, 'wallets', wallet.id);
+    const walletDocRef = doc(userDocRef, 'wallets', wallet.id);
     batch.update(walletDocRef, { balance: wallet.balance - withdrawAmount });
 
     // Credit to main balance
-    const userDocRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userDocRef);
     const currentMainBalance = userDoc.data()?.balance || 0;
     batch.update(userDocRef, { balance: currentMainBalance + withdrawAmount });
 
      // Create a transaction record
-    const transactionRef = doc(collection(db, "transactions"));
+    const transactionRef = doc(collection(userDocRef, "transactions"));
     batch.set(transactionRef, {
-        userId: user.uid,
         walletId: wallet.id,
         amount: withdrawAmount,
         type: 'transfer',

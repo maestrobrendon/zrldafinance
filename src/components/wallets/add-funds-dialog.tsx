@@ -49,19 +49,18 @@ export function AddFundsDialog({ trigger, mainBalance, wallet }: AddFundsDialogP
 
     setIsSubmitting(true);
     const batch = writeBatch(db);
+    const userDocRef = doc(db, "users", user.uid);
 
     // Debit from main balance
-    const userDocRef = doc(db, "users", user.uid);
     batch.update(userDocRef, { balance: mainBalance - addAmount });
 
     // Credit to wallet
-    const walletDocRef = doc(db, 'wallets', wallet.id);
+    const walletDocRef = doc(userDocRef, 'wallets', wallet.id);
     batch.update(walletDocRef, { balance: wallet.balance + addAmount });
     
     // Create a transaction record
-    const transactionRef = doc(collection(db, "transactions"));
+    const transactionRef = doc(collection(userDocRef, "transactions"));
     batch.set(transactionRef, {
-        userId: user.uid,
         walletId: wallet.id,
         amount: addAmount,
         type: 'contribution',

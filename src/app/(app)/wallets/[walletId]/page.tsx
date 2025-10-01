@@ -67,8 +67,9 @@ export default function WalletDetailPage() {
                     setMainBalance(doc.data().balance || 0);
                 }
             });
+
             if (walletId) {
-                const walletDocRef = doc(db, 'wallets', walletId);
+                const walletDocRef = doc(db, "users", firebaseUser.uid, "wallets", walletId);
                 const unsubscribeWallet = onSnapshot(walletDocRef, (doc) => {
                     if (doc.exists()) {
                     const data = doc.data();
@@ -85,11 +86,11 @@ export default function WalletDetailPage() {
                 });
 
                 const transactionsQuery = query(
-                    collection(db, "transactions"),
-                    where("userId", "==", firebaseUser.uid),
+                    collection(db, "users", firebaseUser.uid, "transactions"),
                     where("walletId", "==", walletId),
                     orderBy("timestamp", "desc")
                 );
+
                 const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
                     const transactions: Transaction[] = [];
                     snapshot.forEach(doc => {
@@ -103,9 +104,7 @@ export default function WalletDetailPage() {
                     });
                     setItemTransactions(transactions);
                 }, (error) => {
-                    if (error.code === 'failed-precondition') {
-                        console.warn("Query requires an index. Please create it in the Firebase console.", error.message);
-                    }
+                    console.warn("Query requires an index. If you see a permission error, create a composite index for 'walletId' and 'timestamp' in your Firebase console.", error.message);
                 });
 
                 return () => {
@@ -319,5 +318,3 @@ export default function WalletDetailPage() {
     </div>
   );
 }
-
-    

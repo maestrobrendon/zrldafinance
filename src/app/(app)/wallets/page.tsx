@@ -36,8 +36,7 @@ export default function WalletsPage() {
         });
         
         const q = query(
-            collection(db, "wallets"), 
-            where("userId", "==", user.uid),
+            collection(db, "users", user.uid, "wallets"),
             orderBy("createdAt", "desc")
         );
         const unsubscribeWallets = onSnapshot(q, (querySnapshot) => {
@@ -133,7 +132,7 @@ export default function WalletsPage() {
                 Total balance
                 </p>
                 <div className="flex items-baseline justify-center gap-2">
-                 {mainBalance === null || typeof mainBalance !== 'number' ? (
+                 {mainBalance === null ? (
                     <p className="text-4xl font-bold tracking-tighter">Loading...</p>
                  ) : (
                     <p className="text-4xl font-bold tracking-tighter">

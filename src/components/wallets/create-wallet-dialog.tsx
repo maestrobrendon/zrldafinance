@@ -134,15 +134,15 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     setIsSubmitting(true);
     const batch = writeBatch(db);
     const userDocRef = doc(db, "users", user.uid);
+    const walletsSubcollectionRef = collection(userDocRef, 'wallets');
 
     try {
         let walletData: Partial<Wallet>;
-        const newWalletRef = doc(collection(db, 'wallets'));
+        const newWalletRef = doc(walletsSubcollectionRef);
 
         if (activeTab === 'budget') {
             const limitAmount = values.limit;
 
-            // Check if main balance is sufficient
             const userDoc = await getDoc(userDocRef);
             const mainBalance = userDoc.data()?.balance || 0;
             if (mainBalance < limitAmount) {
@@ -151,14 +151,12 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
                 return;
             }
 
-            // Debit main balance
             batch.update(userDocRef, { balance: mainBalance - limitAmount });
 
             walletData = {
-                userId: user.uid,
                 type: 'budget',
                 name: values.name,
-                balance: limitAmount, // Set initial balance to the limit for budgets
+                balance: limitAmount,
                 limit: limitAmount,
                 spendLimit: values.spendLimit,
                 status: values.isLocked ? 'locked' : 'open',
@@ -176,8 +174,7 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
             };
         } else { // goal
             walletData = {
-                userId: user.uid,
-                balance: 0, // Goals start with 0 balance
+                balance: 0,
                 type: 'goal',
                 name: values.name,
                 status: values.lockOption ? 'locked' : 'open',

@@ -71,10 +71,9 @@ export default function WithdrawPage() {
 
         batch.update(userDocRef, { balance: newBalance });
 
-        const transactionRef = doc(collection(db, "transactions"));
+        const transactionRef = doc(collection(userDocRef, "transactions"));
         const newTransactionId = `TXW${Date.now()}`;
         batch.set(transactionRef, {
-            userId: user.uid,
             amount: withdrawAmount,
             type: 'expense',
             status: 'completed',
@@ -238,5 +237,3 @@ export default function WithdrawPage() {
         </div>
     );
 }
-
-    
