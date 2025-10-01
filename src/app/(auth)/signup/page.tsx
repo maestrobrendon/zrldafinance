@@ -78,7 +78,7 @@ export default function SignupPage() {
         userId: user.uid,
         email: user.email,
         name: name,
-        balance: 15000,
+        balance: 50000,
         zcashBalance: 10000,
         KYC_status: 'Not Verified',
         photoURL: newPhotoURL,
