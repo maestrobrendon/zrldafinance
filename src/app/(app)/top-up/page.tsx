@@ -118,7 +118,7 @@ export default function TopUpPage() {
                     <CardDescription>Transfer to your unique account to top up.</CardDescription>
                 </CardHeader>
             </Card>
-            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedMethod('card')}>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedMethod('card'); setStep('form'); }}>
                 <CardHeader>
                     <CardTitle>Top Up with Card</CardTitle>
                     <CardDescription>Use your debit or credit card.</CardDescription>
@@ -144,7 +144,7 @@ export default function TopUpPage() {
 
         return (
             <div className="space-y-6">
-                 <Button variant="ghost" onClick={() => setSelectedMethod(null)} className="mb-4">
+                 <Button variant="ghost" onClick={() => { setSelectedMethod(null); setStep('select'); }} className="mb-4">
                     <Icons.chevronLeft className="mr-2 h-4 w-4" /> Back to methods
                 </Button>
 
