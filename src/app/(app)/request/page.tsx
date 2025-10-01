@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import type { User } from "firebase/auth";
 
 const zrldaFriends = [
     { id: 'f1', name: 'Jane Doe', avatarUrl: 'https://picsum.photos/seed/2/100/100', handle: '@jane.doe' },
@@ -24,7 +27,24 @@ export default function RequestPage() {
     const [selectedFriend, setSelectedFriend] = useState<(typeof zrldaFriends)[0] | null>(null);
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
-    const [zcashBalance, setZcashBalance] = useState(10000); // Placeholder
+    const [zcashBalance, setZcashBalance] = useState(0);
+    const [user, setUser] = useState<User | null>(null);
+
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+            setUser(firebaseUser);
+            if (firebaseUser) {
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setZcashBalance(userDoc.data().zcashBalance || 0);
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
 
     const handleSelectFriend = (friend: (typeof zrldaFriends)[0]) => {
         setSelectedFriend(friend);
@@ -152,7 +172,7 @@ export default function RequestPage() {
                     </div>
                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Request ID</span>
-                        <span className="font-medium">REQ123456789</span>
+                        <span className="font-medium">REQ{Date.now()}</span>
                     </div>
                 </CardContent>
             </Card>
@@ -189,3 +209,5 @@ export default function RequestPage() {
         </div>
     );
 }
+
+    

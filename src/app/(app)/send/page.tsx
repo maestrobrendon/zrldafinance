@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
-import { mainBalance } from "@/lib/data";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, writeBatch, collection } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
+import type { User } from "firebase/auth";
 
 const zrldaFriends = [
     { id: 'f1', name: 'Jane Doe', avatarUrl: 'https://picsum.photos/seed/2/100/100', handle: '@jane.doe' },
@@ -28,6 +31,7 @@ const activeCircles = [
 ]
 
 export default function SendPage() {
+    const { toast } = useToast();
     const [step, setStep] = useState('form'); // form, review, success
     const searchParams = useSearchParams()
     const source = searchParams.get('source');
@@ -40,14 +44,97 @@ export default function SendPage() {
     const [note, setNote] = useState('');
     const [selectedFriend, setSelectedFriend] = useState<(typeof zrldaFriends)[0] | null>(null);
     const [selectedCircle, setSelectedCircle] = useState<(typeof activeCircles)[0] | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const zcashBalance = 10000; // Placeholder
-    const balanceToShow = isZcashFlow ? zcashBalance : mainBalance.balance;
+    const [user, setUser] = useState<User | null>(null);
+    const [mainBalance, setMainBalance] = useState(0);
+    const [zcashBalance, setZcashBalance] = useState(0);
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+            setUser(firebaseUser);
+            if (firebaseUser) {
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setMainBalance(userDoc.data().balance || 0);
+                    setZcashBalance(userDoc.data().zcashBalance || 0);
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const balanceToShow = isZcashFlow ? zcashBalance : mainBalance;
 
     const handleSelectFriend = (friend: (typeof zrldaFriends)[0]) => {
         setSelectedFriend(friend);
         setAmount('');
         setNote('');
+    }
+
+    const handleSend = async () => {
+        if (!user || !amount || !selectedFriend) return;
+
+        setIsSubmitting(true);
+        const sendAmount = parseFloat(amount);
+
+        if (isNaN(sendAmount) || sendAmount <= 0) {
+            toast({ variant: 'destructive', title: 'Invalid amount' });
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (sendAmount > balanceToShow) {
+            toast({ variant: 'destructive', title: 'Insufficient Funds' });
+            setIsSubmitting(false);
+            return;
+        }
+
+        const batch = writeBatch(db);
+        const userDocRef = doc(db, "users", user.uid);
+
+        if (isZcashFlow) {
+            batch.update(userDocRef, { zcashBalance: zcashBalance - sendAmount });
+        } else {
+            batch.update(userDocRef, { balance: mainBalance - sendAmount });
+        }
+
+        const transactionRef = doc(collection(db, "transactions"));
+        batch.set(transactionRef, {
+            userId: user.uid,
+            amount: sendAmount,
+            type: 'payment',
+            status: 'completed',
+            timestamp: new Date(),
+            description: `Sent to ${selectedFriend.name}`,
+            category: 'Wallet',
+            to: selectedFriend.handle,
+            note: note,
+        });
+
+        try {
+            await batch.commit();
+            setStep('success');
+             // Manually update balance for UI responsiveness
+            if (isZcashFlow) {
+                setZcashBalance(prev => prev - sendAmount);
+            } else {
+                setMainBalance(prev => prev - sendAmount);
+            }
+        } catch (error) {
+            console.error("Send error:", error);
+            toast({ variant: 'destructive', title: 'Send Failed', description: 'An error occurred.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const resetForm = () => {
+        setStep('form');
+        setAmount('');
+        setNote('');
+        setSelectedFriend(null);
     }
 
     const renderForm = () => (
@@ -220,7 +307,10 @@ export default function SendPage() {
             </Card>
              <div className="flex gap-4">
                 <Button variant="outline" className="w-full" onClick={() => setStep('form')}>Back</Button>
-                <Button className="w-full" onClick={() => setStep('success')}>Confirm & Send</Button>
+                <Button className="w-full" onClick={handleSend} disabled={isSubmitting}>
+                    {isSubmitting && <Icons.logo className="mr-2 h-4 w-4 animate-spin" />}
+                    Confirm & Send
+                </Button>
             </div>
         </div>
     );
@@ -246,13 +336,13 @@ export default function SendPage() {
                     </div>
                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Transaction ID</span>
-                        <span className="font-medium">TX123456789</span>
+                        <span className="font-medium">TX{Date.now()}</span>
                     </div>
                 </CardContent>
             </Card>
             <div className="w-full flex gap-4">
                 <Button variant="outline" className="w-full">Share Receipt</Button>
-                <Button className="w-full" onClick={() => setStep('form')}>Done</Button>
+                <Button className="w-full" onClick={resetForm}>Done</Button>
             </div>
         </div>
     );
@@ -261,12 +351,12 @@ export default function SendPage() {
         <div className="space-y-8">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" asChild>
-                    <Link href="/dashboard"><Icons.arrowLeft className="h-5 w-5" /></Link>
+                    <Link href={isZcashFlow ? "/zcash" : "/dashboard"}><Icons.arrowLeft className="h-5 w-5" /></Link>
                 </Button>
                 <div className="text-center flex-1">
                     <h1 className="text-xl font-bold tracking-tight">Send Money</h1>
                     <p className="text-sm text-muted-foreground">
-                        Your current balance: {' '}
+                        Your {isZcashFlow ? "ZCash" : "Main"} balance: {' '}
                         <span className="font-bold text-primary">
                             {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(balanceToShow)}
                         </span>
@@ -281,3 +371,5 @@ export default function SendPage() {
         </div>
     );
 }
+
+    
