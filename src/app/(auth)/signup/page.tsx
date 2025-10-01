@@ -18,8 +18,7 @@ import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where, serverTimestamp } from "firebase/firestore";
-import { seedInitialData } from "@/lib/data";
+import { doc, setDoc, getDocs, collection, query, where, serverTimestamp, writeBatch, Timestamp, addDoc } from "firebase/firestore";
 
 async function generateUniqueZtag(name: string): Promise<string> {
     let ztag = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
@@ -43,7 +42,6 @@ async function generateUniqueZtag(name: string): Promise<string> {
     }
 
     if (!isUnique) {
-        // Fallback to a purely random ztag if we can't find a unique one
         finalZtag = `user.${Math.random().toString(36).substring(2, 8)}`;
     }
     
@@ -61,37 +59,84 @@ export default function SignupPage() {
   const handleSignup = async () => {
     setLoading(true);
     setError(null);
+    if (!name || !email || !password) {
+        setError("Please fill in all fields.");
+        setLoading(false);
+        return;
+    }
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
-      
-      await updateProfile(user, {
-        displayName: name,
-        photoURL: newPhotoURL,
-      });
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
+        
+        await updateProfile(user, {
+            displayName: name,
+            photoURL: newPhotoURL,
+        });
 
-      const ztag = await generateUniqueZtag(name);
+        const ztag = await generateUniqueZtag(name);
+        const now = Timestamp.now();
 
-      await setDoc(doc(db, "users", user.uid), {
-        userId: user.uid,
-        email: user.email,
-        name: name,
-        balance: 50000,
-        zcashBalance: 10000,
-        kycStatus: 'Not Verified',
-        photoURL: newPhotoURL,
-        ztag: ztag,
-        phone: '',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        ztagLastUpdated: null
-      });
+        const batch = writeBatch(db);
 
-      await seedInitialData(user.uid);
+        // 1. Create User Document
+        const userDocRef = doc(db, "users", user.uid);
+        batch.set(userDocRef, {
+            userId: user.uid,
+            email: user.email,
+            name: name,
+            balance: 50000,
+            zcashBalance: 10000,
+            kycStatus: 'pending',
+            photoURL: newPhotoURL,
+            ztag: ztag,
+            phone: '',
+            createdAt: now,
+            updatedAt: now,
+        });
+        
+        // 2. Create Default Wallets
+        const walletsCollectionRef = collection(userDocRef, 'wallets');
+        const groceriesWalletRef = doc(walletsCollectionRef);
+        batch.set(groceriesWalletRef, {
+            name: "Groceries",
+            type: "budget",
+            limit: 20000,
+            balance: 5000,
+            locked: true,
+            createdAt: now,
+            updatedAt: now
+        });
 
-      router.push("/dashboard");
+        const rentWalletRef = doc(walletsCollectionRef);
+        batch.set(rentWalletRef, {
+            name: "Rent",
+            type: "goal",
+            goalAmount: 200000,
+            balance: 0,
+            locked: true,
+            createdAt: now,
+            updatedAt: now
+        });
+
+        // 3. Create Default Transaction
+        const txCollectionRef = collection(userDocRef, 'transactions');
+        const initialTxRef = doc(txCollectionRef);
+        batch.set(initialTxRef, {
+            type: "topup",
+            amount: 50000,
+            status: "completed",
+            description: "Initial balance",
+            timestamp: now,
+            category: "Income"
+        });
+
+        await batch.commit();
+
+        router.push("/dashboard");
+
     } catch (error: any) {
       switch (error.code) {
         case 'auth/email-already-in-use':

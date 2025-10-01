@@ -22,7 +22,7 @@ export type Transaction = {
   userId: string;
   walletId?: string; // Link to the wallet
   amount: number;
-  type: 'income' | 'expense' | 'contribution' | 'payment' | 'transfer';
+  type: 'income' | 'expense' | 'contribution' | 'payment' | 'transfer' | 'topup';
   status: 'completed' | 'pending' | 'failed';
   timestamp: Date | Timestamp;
   date: string; // ISO string for client-side rendering
@@ -113,7 +113,7 @@ export type Budget = Wallet & {
 export type Goal = Wallet & {
   type: 'goal';
   goalAmount: number;
-  deadline: Timestamp;
+  deadline?: Date | Timestamp;
 }
 
 
@@ -127,113 +127,6 @@ export const mainBalance = {
   balance: 50000,
   currency: 'USD',
 };
-
-export const initialWallets: Omit<Wallet, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'deadline'>[] & { deadline?: Date } = [
-  {
-    type: 'budget',
-    name: 'Monthly Groceries',
-    balance: 400,
-    status: 'open',
-    limit: 400,
-  },
-  {
-    type: 'budget',
-    name: 'Coffee & Snacks',
-    balance: 75,
-    status: 'open',
-    limit: 75,
-  },
-  {
-    type: 'goal',
-    name: 'Summer Vacation',
-    balance: 1250.00,
-    status: 'locked',
-    goalAmount: 2500,
-    deadline: new Date('2024-12-31T23:59:59Z'),
-  },
-    {
-    type: 'goal',
-    name: 'New Laptop',
-    balance: 800.00,
-    status: 'open',
-    goalAmount: 1500,
-    deadline: new Date('2024-10-31T23:59:59Z'),
-  },
-  {
-    type: 'goal',
-    name: 'Down Payment',
-    balance: 10500.00,
-    status: 'locked',
-    goalAmount: 20000,
-    deadline: new Date('2025-12-31T23:59:59Z'),
-  },
-];
-
-export const initialTransactions: Omit<Transaction, 'id'|'transactionId'|'userId'|'timestamp'>[] = [
-    {
-        amount: 3500.00,
-        type: 'income',
-        status: 'completed',
-        date: '2024-07-28T09:00:00Z',
-        description: 'Salary Deposit',
-        category: 'Income',
-        icon: Icons.dollarSign,
-    },
-    {
-        amount: 15.99,
-        type: 'expense',
-        status: 'completed',
-        date: '2024-07-27T18:30:00Z',
-        description: 'Netflix Subscription',
-        category: 'Entertainment',
-        icon: Icons.entertainment,
-    },
-    {
-        amount: 124.50,
-        type: 'expense',
-        status: 'completed',
-        date: '2024-07-27T12:45:00Z',
-        description: 'Grocery Shopping',
-        category: 'Groceries',
-        icon: Icons.shoppingCart,
-    },
-    {
-        amount: 5.75,
-        type: 'expense',
-        status: 'completed',
-        date: '2024-07-26T08:15:00Z',
-        description: 'Starbucks Coffee',
-        category: 'Restaurants',
-        icon: Icons.utensils,
-    },
-    {
-        amount: 75.00,
-        type: 'expense',
-        status: 'pending',
-        date: '2024-07-25T10:00:00Z',
-        description: 'Electricity Bill',
-        category: 'Utilities',
-        icon: Icons.bolt,
-    },
-    {
-        amount: 450.00,
-        type: 'expense',
-        status: 'completed',
-        date: '2024-07-24T14:20:00Z',
-        description: 'Flight to New York',
-        category: 'Travel',
-        icon: Icons.plane,
-    },
-     {
-        amount: 250.00,
-        type: 'transfer',
-        status: 'completed',
-        date: '2024-07-23T11:00:00Z',
-        description: 'Sent to Jane Doe',
-        category: 'Wallet',
-        icon: Icons.wallet,
-    },
-];
 
 export const sharedExpenses: SharedExpense[] = [
   {
@@ -261,34 +154,4 @@ export const categories = [
 export const defaultUser: Omit<UserProfile, 'userId' | 'email' | 'balance' | 'KYC_status' | 'zcashBalance'> = {
   name: 'Alex Doe',
   avatarUrl: 'https://picsum.photos/seed/1/100/100',
-};
-
-// Seed initial data for a new user
-export const seedInitialData = async (userId: string) => {
-    const batch = writeBatch(db);
-    const now = Timestamp.now();
-    const userDocRef = doc(db, 'users', userId);
-
-    const walletsCollectionRef = collection(userDocRef, 'wallets');
-    initialWallets.forEach(wallet => {
-        const docRef = doc(walletsCollectionRef); // Create a new doc in the subcollection
-        batch.set(docRef, {
-            ...wallet,
-            createdAt: now,
-            updatedAt: now,
-            deadline: wallet.deadline ? Timestamp.fromDate(wallet.deadline) : undefined,
-        });
-    });
-
-    const transactionsCollectionRef = collection(userDocRef, 'transactions');
-    initialTransactions.forEach(tx => {
-        const docRef = doc(transactionsCollectionRef); // Create a new doc in the subcollection
-        batch.set(docRef, {
-            ...tx,
-            transactionId: `txn_${docRef.id}`,
-            timestamp: Timestamp.fromDate(new Date(tx.date)),
-        });
-    });
-
-    await batch.commit();
 };
