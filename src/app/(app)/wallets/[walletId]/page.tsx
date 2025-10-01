@@ -73,7 +73,7 @@ export default function WalletDetailPage() {
   }, []);
   
   React.useEffect(() => {
-    if (walletId) {
+    if (walletId && user) {
       const walletDocRef = doc(db, 'wallets', walletId);
       const unsubscribeWallet = onSnapshot(walletDocRef, (doc) => {
         if (doc.exists()) {
@@ -90,13 +90,10 @@ export default function WalletDetailPage() {
         }
       });
 
-      // Fetch transactions related to this wallet.
-      // This is a simplified query; a real app might need more complex logic
-      // to associate transactions with wallets (e.g., a walletId field on transactions).
       const transactionsQuery = query(
           collection(db, "transactions"),
-          where("userId", "==", user?.uid || ""),
-          where("description", "==", `Contribution to ${wallet?.name}`), // Example filter
+          where("userId", "==", user.uid),
+          where("walletId", "==", walletId),
           orderBy("timestamp", "desc")
       );
       const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
@@ -118,7 +115,7 @@ export default function WalletDetailPage() {
           unsubscribeTransactions();
       };
     }
-  }, [walletId, user, wallet?.name]);
+  }, [walletId, user]);
 
   if (!wallet) {
     return (

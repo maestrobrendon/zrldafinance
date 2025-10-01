@@ -63,6 +63,7 @@ export function WithdrawFundsDialog({ trigger, wallet }: WithdrawFundsDialogProp
     const transactionRef = doc(collection(db, "transactions"));
     batch.set(transactionRef, {
         userId: user.uid,
+        walletId: wallet.id,
         amount: withdrawAmount,
         type: 'transfer',
         status: 'completed',

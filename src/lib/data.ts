@@ -19,6 +19,7 @@ export type Transaction = {
   id: string;
   transactionId: string;
   userId: string;
+  walletId?: string; // Link to the wallet
   amount: number;
   type: 'income' | 'expense' | 'contribution' | 'payment' | 'transfer';
   status: 'completed' | 'pending' | 'failed';
@@ -123,7 +124,7 @@ export const user = {
 };
 
 export const mainBalance = {
-  balance: 15000,
+  balance: 50000,
   currency: 'USD',
 };
 

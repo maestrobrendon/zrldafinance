@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "../icons";
 import { type Wallet } from "@/lib/data";
-import { doc, writeBatch } from "firebase/firestore";
+import { doc, writeBatch, collection } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -62,6 +62,7 @@ export function AddFundsDialog({ trigger, mainBalance, wallet }: AddFundsDialogP
     const transactionRef = doc(collection(db, "transactions"));
     batch.set(transactionRef, {
         userId: user.uid,
+        walletId: wallet.id,
         amount: addAmount,
         type: 'contribution',
         status: 'completed',
