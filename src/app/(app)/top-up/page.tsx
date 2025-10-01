@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,9 @@ import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { auth, db } from "@/lib/firebase";
+import { doc, onSnapshot, writeBatch, collection } from "firebase/firestore";
+import type { User } from "firebase/auth";
 
 const linkedBanks = [
     { id: 'b1', name: 'Guaranty Trust Bank', last4: '... 2345' },
@@ -20,6 +23,32 @@ export default function TopUpPage() {
     const { toast } = useToast();
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [step, setStep] = useState('select'); // select, form, success
+    const [amount, setAmount] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
+    const [mainBalance, setMainBalance] = useState<number | null>(null);
+    const [transactionId, setTransactionId] = useState('');
+
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(firebaseUser => {
+            setUser(firebaseUser);
+            if(firebaseUser) {
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+                    if (doc.exists()) {
+                        setMainBalance(doc.data().balance || 0);
+                    } else {
+                        setMainBalance(0);
+                    }
+                });
+                return () => unsubscribeUser();
+            } else {
+                setMainBalance(null);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     const handleCopy = () => {
         navigator.clipboard.writeText("0123456789");
@@ -28,6 +57,58 @@ export default function TopUpPage() {
             description: "Account number copied to clipboard.",
         });
     };
+    
+    const handleTopUpWithCard = async () => {
+        if (!user || !amount) return;
+
+        setIsSubmitting(true);
+        const topUpAmount = parseFloat(amount);
+
+        if (isNaN(topUpAmount) || topUpAmount <= 0) {
+            toast({ variant: 'destructive', title: 'Invalid Amount' });
+            setIsSubmitting(false);
+            return;
+        }
+
+        const batch = writeBatch(db);
+        const userDocRef = doc(db, "users", user.uid);
+        const newBalance = (mainBalance || 0) + topUpAmount;
+
+        batch.update(userDocRef, { balance: newBalance });
+
+        const transactionRef = doc(collection(db, "transactions"));
+        const newTransactionId = `TX${Date.now()}`;
+        batch.set(transactionRef, {
+            userId: user.uid,
+            amount: topUpAmount,
+            type: 'income',
+            status: 'completed',
+            timestamp: new Date(),
+            description: 'Top up from card',
+            category: 'Income',
+            transactionId: newTransactionId
+        });
+        
+        setTransactionId(newTransactionId);
+
+        try {
+            await batch.commit();
+            setMainBalance(newBalance);
+            setStep('success');
+        } catch (error) {
+            console.error("Top up error:", error);
+            toast({ variant: 'destructive', title: 'Top Up Failed', description: 'An error occurred.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    const resetAndClose = () => {
+        setStep('select');
+        setSelectedMethod(null);
+        setAmount('');
+        setTransactionId('');
+    }
 
     const renderSelectMethod = () => (
         <div className="space-y-4">
@@ -112,9 +193,12 @@ export default function TopUpPage() {
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="amount">Amount</Label>
-                                <Input id="amount" type="number" placeholder="₦0.00" />
+                                <Input id="amount" type="number" placeholder="$0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
                             </div>
-                             <Button className="w-full" onClick={() => setStep('success')}>Top Up</Button>
+                             <Button className="w-full" onClick={handleTopUpWithCard} disabled={isSubmitting || !amount}>
+                                {isSubmitting && <Icons.logo className="mr-2 h-4 w-4 animate-spin" />}
+                                Top Up
+                             </Button>
                         </CardContent>
                     </Card>
                 )}
@@ -143,7 +227,7 @@ export default function TopUpPage() {
                             <Separator />
                             <div className="space-y-2">
                                 <Label htmlFor="amount-bank">Amount</Label>
-                                <Input id="amount-bank" type="number" placeholder="₦0.00" />
+                                <Input id="amount-bank" type="number" placeholder="$0.00" />
                             </div>
                             <Button className="w-full" onClick={() => setStep('success')}>Top Up</Button>
                         </CardContent>
@@ -176,25 +260,25 @@ export default function TopUpPage() {
             </div>
             <div>
                 <h2 className="text-2xl font-bold">Top Up Successful!</h2>
-                <p className="text-muted-foreground">You have successfully added ₦10,000.00 to your wallet.</p>
+                <p className="text-muted-foreground">You have successfully added {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))} to your wallet.</p>
             </div>
             <Card className="w-full text-left">
                 <CardContent className="pt-6 space-y-4">
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Amount</span>
-                        <span className="font-medium">₦10,000.00</span>
+                        <span className="font-medium">{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(parseFloat(amount))}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">New Balance</span>
-                        <span className="font-medium">₦61,465.43</span>
+                        <span className="font-medium">{mainBalance !== null ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(mainBalance) : '...'}</span>
                     </div>
                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Transaction ID</span>
-                        <span className="font-medium">TX987654321</span>
+                        <span className="font-medium">{transactionId}</span>
                     </div>
                 </CardContent>
             </Card>
-            <Button className="w-full" onClick={() => { setStep('select'); setSelectedMethod(null); }}>Done</Button>
+            <Button className="w-full" onClick={resetAndClose}>Done</Button>
         </div>
     );
 
@@ -207,10 +291,14 @@ export default function TopUpPage() {
                 </Button>
                 <div className="text-center flex-1">
                     <h1 className="text-xl font-bold tracking-tight">Top Up Wallet</h1>
-                    <p className="text-sm text-muted-foreground">
+                     <p className="text-sm text-muted-foreground">
                         Your current balance: {' '}
                         <span className="font-bold text-primary">
-                            {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(51440.43)}
+                            {mainBalance === null ? (
+                                'Loading...'
+                            ) : (
+                                new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(mainBalance)
+                            )}
                         </span>
                     </p>
                 </div>
@@ -223,3 +311,5 @@ export default function TopUpPage() {
         </div>
     );
 }
+
+    
