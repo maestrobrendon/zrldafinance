@@ -73,7 +73,7 @@ export default function WalletDetailPage() {
   }, []);
   
   React.useEffect(() => {
-    if (walletId && user) {
+    if (walletId) {
       const walletDocRef = doc(db, 'wallets', walletId);
       const unsubscribeWallet = onSnapshot(walletDocRef, (doc) => {
         if (doc.exists()) {
@@ -92,7 +92,6 @@ export default function WalletDetailPage() {
 
       const transactionsQuery = query(
           collection(db, "transactions"),
-          where("userId", "==", user.uid),
           where("walletId", "==", walletId),
           orderBy("timestamp", "desc")
       );
@@ -115,7 +114,7 @@ export default function WalletDetailPage() {
           unsubscribeTransactions();
       };
     }
-  }, [walletId, user]);
+  }, [walletId]);
 
   if (!wallet) {
     return (
@@ -318,3 +317,5 @@ export default function WalletDetailPage() {
     </div>
   );
 }
+
+    
