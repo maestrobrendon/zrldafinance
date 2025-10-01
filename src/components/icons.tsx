@@ -48,6 +48,7 @@ import {
   UserCog,
   Shield,
   SlidersHorizontal,
+  Download,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -151,7 +152,7 @@ export const Icons = {
   ),
   'round-up': Leaf,
   'recurring-payment': Repeat,
-  download: ArrowDownLeft,
+  download: Download,
   home: Home,
   'user-cog': UserCog,
   shield: Shield,

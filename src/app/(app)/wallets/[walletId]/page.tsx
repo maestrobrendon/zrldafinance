@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { type Wallet, type Transaction } from "@/lib/data";
 import { Progress } from "@/components/ui/progress";
-import { format, parseISO, differenceInDays } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
@@ -34,7 +34,8 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
   Other: Icons.grid,
   Wallet: Icons.wallet,
   contribution: Icons.download,
-  payment: Icons.move
+  transfer: Icons.move,
+  payment: Icons.send
 };
 
 const groupTransactionsByMonth = (transactions: Transaction[]) => {
@@ -101,6 +102,10 @@ export default function WalletDetailPage() {
                         } as Transaction);
                     });
                     setItemTransactions(transactions);
+                }, (error) => {
+                    if (error.code === 'failed-precondition') {
+                        console.warn("Query requires an index. Please create it in the Firebase console.", error.message);
+                    }
                 });
 
                 return () => {
@@ -264,7 +269,7 @@ export default function WalletDetailPage() {
                      <Card>
                         <CardContent className="p-4 space-y-2">
                             {transactions.map((activity, index) => {
-                               const Icon = activity.icon || categoryIcons[activity.type] || categoryIcons[activity.category] || Icons.grid;
+                               const Icon = categoryIcons[activity.type] || categoryIcons[activity.category] || Icons.grid;
                                const isIncome = activity.type === 'income' || activity.type === 'contribution';
                                 return (
                                 <div key={activity.id}>
@@ -314,5 +319,3 @@ export default function WalletDetailPage() {
     </div>
   );
 }
-
-    
