@@ -86,12 +86,6 @@ export default function DashboardPage() {
                         deadline: data.deadline?.toDate(),
                     } as Wallet);
                 });
-                // Sort client-side
-                userWallets.sort((a, b) => {
-                    const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : a.createdAt?.seconds || 0;
-                    const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : b.createdAt?.seconds || 0;
-                    return dateB - dateA;
-                });
                 setWallets(userWallets);
             }, (error) => {
                 console.error("Error fetching wallets:", error);
@@ -339,3 +333,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
