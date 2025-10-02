@@ -1,0 +1,48 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Users can read/update their own profile.
+    // User documents are created during signup, not directly by clients.
+    match /users/{userId} {
+      allow read, update: if isOwner(userId);
+      allow create: if false; // Handled by server-side logic on signup
+      allow delete: if false; // Users should not be able to delete their own profiles
+
+      // Wallets: Users have full control over their own wallets.
+      match /wallets/{walletId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Transactions: Users can create and read their own transactions.
+      // Updates and deletes are disallowed to maintain a clear audit trail.
+      match /transactions/{transactionId} {
+        allow read, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
+    }
+
+    // Circles: For now, we will assume anyone authenticated can read circles,
+    // but only members can modify them. This is a placeholder and should be
+    // refined based on specific app logic for public vs. private circles.
+    match /circles/{circleId} {
+      allow read: if request.auth != null;
+      // Write access would require checking if the user is a member, e.g.
+      // allow write: if request.auth.uid in resource.data.members;
+
+      // Circle Transactions
+      match /transactions/{transactionId} {
+        // Similar logic, only members should be able to read/write circle transactions
+        allow read, create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/circles/$(circleId)).data.members;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
