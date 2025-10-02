@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -6,43 +5,46 @@ service cloud.firestore {
 
     // Helper functions
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
-    // Users can read/update their own profile.
-    // User documents are created during signup, not directly by clients.
+    // USERS
+    // Users can read their own public data.
+    // Users can update their own data.
+    // New users can create their own document.
     match /users/{userId} {
       allow read, update: if isOwner(userId);
-      allow create: if false; // Handled by server-side logic on signup
-      allow delete: if false; // Users should not be able to delete their own profiles
-
-      // Wallets: Users have full control over their own wallets.
-      match /wallets/{walletId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      // Transactions: Users can create and read their own transactions.
-      // Updates and deletes are disallowed to maintain a clear audit trail.
-      match /transactions/{transactionId} {
-        allow read, create: if isOwner(userId);
-        allow update, delete: if false;
-      }
+      allow create: if isOwner(userId); // Fix: User must be creating their own document.
     }
 
-    // Circles: For now, we will assume anyone authenticated can read circles,
-    // but only members can modify them. This is a placeholder and should be
-    // refined based on specific app logic for public vs. private circles.
-    match /circles/{circleId} {
-      allow read: if request.auth != null;
-      // Write access would require checking if the user is a member, e.g.
-      // allow write: if request.auth.uid in resource.data.members;
+    // WALLETS (subcollection)
+    // Users can manage their own wallets.
+    match /users/{userId}/wallets/{walletId} {
+        allow read, write: if isOwner(userId);
+    }
 
-      // Circle Transactions
-      match /transactions/{transactionId} {
-        // Similar logic, only members should be able to read/write circle transactions
-        allow read, create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/circles/$(circleId)).data.members;
-        allow update, delete: if false;
-      }
+    // TRANSACTIONS (subcollection)
+    // Users can create and read their own transactions.
+    // Transactions are immutable (cannot be updated or deleted).
+    match /users/{userId}/transactions/{transactionId} {
+      allow read, create: if isOwner(userId);
+    }
+    
+    // CIRCLES
+    match /circles/{circleId} {
+      // Anyone authenticated can view public circle info
+      allow read: if request.auth.uid != null;
+      // Only members can update a circle
+      allow update: if request.auth.uid in resource.data.members;
+      // Anyone can create a circle
+      allow create: if request.auth.uid != null;
+    }
+    
+    match /circles/{circleId}/transactions/{transactionId} {
+        // Members of the circle can see all transactions
+        allow read: if get(/databases/$(database)/documents/circles/$(circleId)).data.members.hasAny([request.auth.uid]);
+        // Only circle members can create transactions
+        allow create: if get(/databases/$(database)/documents/circles/$(circleId)).data.members.hasAny([request.auth.uid]);
     }
   }
 }

@@ -18,7 +18,7 @@ import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where, serverTimestamp, writeBatch, Timestamp, addDoc } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch, addDoc } from "firebase/firestore";
 
 async function generateUniqueZtag(name: string): Promise<string> {
     let ztag = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
@@ -87,10 +87,14 @@ export default function SignupPage() {
             userId: user.uid,
             email: user.email,
             name: name,
+            fullName: name,
             balance: 50000,
+            mainBalance: 50000,
             zcashBalance: 10000,
             kycStatus: 'pending',
+            currency: 'NGN',
             photoURL: newPhotoURL,
+            profilePicture: newPhotoURL,
             ztag: ztag,
             phone: '',
             createdAt: now,
@@ -103,22 +107,24 @@ export default function SignupPage() {
         batch.set(groceriesWalletRef, {
             name: "Groceries",
             type: "budget",
-            limit: 20000,
+            targetAmount: 20000,
+            currentBalance: 5000,
             balance: 5000,
             locked: true,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
         });
 
         const rentWalletRef = doc(walletsCollectionRef);
         batch.set(rentWalletRef, {
             name: "Rent",
             type: "goal",
-            goalAmount: 200000,
+            targetAmount: 200000,
+            currentBalance: 0,
             balance: 0,
             locked: true,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
         });
 
         // 3. Create Default Transaction
@@ -129,6 +135,7 @@ export default function SignupPage() {
             amount: 50000,
             status: "completed",
             description: "Initial balance",
+            createdAt: now,
             timestamp: now,
             category: "Income"
         });
@@ -148,9 +155,11 @@ export default function SignupPage() {
         case 'auth/weak-password':
           setError('The password is too weak. It must be at least 6 characters long.');
           break;
+        case 'permission-denied':
+            setError('There was a problem setting up your account. Please try again.');
+            break;
         default:
           setError('An unexpected error occurred. Please try again.');
-          console.error("Signup error:", error);
           break;
       }
     } finally {
