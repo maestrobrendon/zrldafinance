@@ -72,7 +72,6 @@ export default function DashboardPage() {
             // Wallets listener (subcollection)
             const walletsQuery = query(
                 collection(db, "users", firebaseUser.uid, "wallets"), 
-                orderBy("createdAt", "desc"), 
                 limit(6)
             );
             const unsubscribeWallets = onSnapshot(walletsQuery, (querySnapshot) => {
@@ -86,6 +85,12 @@ export default function DashboardPage() {
                         updatedAt: data.updatedAt?.toDate(),
                         deadline: data.deadline?.toDate(),
                     } as Wallet);
+                });
+                // Sort client-side
+                userWallets.sort((a, b) => {
+                    const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : a.createdAt?.seconds || 0;
+                    const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : b.createdAt?.seconds || 0;
+                    return dateB - dateA;
                 });
                 setWallets(userWallets);
             }, (error) => {
