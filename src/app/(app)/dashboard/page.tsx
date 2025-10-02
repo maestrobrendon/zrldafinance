@@ -71,8 +71,7 @@ export default function DashboardPage() {
 
             // Wallets listener (subcollection)
             const walletsQuery = query(
-                collection(db, "users", firebaseUser.uid, "wallets"), 
-                limit(6)
+                collection(db, "users", firebaseUser.uid, "wallets")
             );
             const unsubscribeWallets = onSnapshot(walletsQuery, (querySnapshot) => {
                 const userWallets: Wallet[] = [];
@@ -86,7 +85,7 @@ export default function DashboardPage() {
                         deadline: data.deadline?.toDate(),
                     } as Wallet);
                 });
-                setWallets(userWallets);
+                setWallets(userWallets.slice(0, 6));
             }, (error) => {
                 console.error("Error fetching wallets:", error);
                  if (error.code === 'permission-denied') {
@@ -333,5 +332,7 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
 
     
