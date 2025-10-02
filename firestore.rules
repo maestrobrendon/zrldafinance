@@ -1,58 +1,24 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check ownership
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // A user can create their own user document.
-      allow create: if isOwner(userId);
-      
-      // A user can read and update their own profile.
       allow read, update: if isOwner(userId);
-      
-      // Nobody can delete a user document for safety.
-      allow delete: if false;
+      allow create: if isOwner(userId);
 
-      // Rules for the 'wallets' subcollection
+      // Wallets Subcollection
       match /wallets/{walletId} {
-        // A user can create wallets under their own user document.
-        allow create: if request.auth.uid == userId;
-        
-        // A user can read, update, and delete their own wallets.
+        allow create: if request.auth.uid == request.resource.data.userId;
         allow read, update, delete: if isOwner(userId);
       }
 
-      // Rules for the 'transactions' subcollection
+      // Transactions Subcollection
       match /transactions/{transactionId} {
-        // A user can create transactions under their own user document.
-        allow create: if request.auth.uid == userId;
-        
-        // A user can read their own transactions.
+        allow create: if request.auth.uid == request.resource.data.userId;
         allow read: if isOwner(userId);
-        
-        // Transactions are immutable to maintain a secure audit trail.
-        allow update, delete: if false;
-      }
-    }
-    
-    // Global collections (like 'circles') would be defined here.
-    // Example for a future 'circles' collection
-    match /circles/{circleId} {
-      allow read: if request.auth != null; // Allow any authenticated user to read circle info
-      allow create: if request.auth != null; // Allow any authenticated user to create a circle
-      
-      // Only a member of the circle can update it (example)
-      allow update: if request.auth.uid in resource.data.members;
-
-      // Rules for circle transactions
-      match /transactions/{transactionId} {
-        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/circles/$(circleId)).data.members;
       }
     }
   }
