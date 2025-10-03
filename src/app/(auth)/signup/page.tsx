@@ -18,7 +18,7 @@ import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch, addDoc } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch } from "firebase/firestore";
 
 type Step = 'phone' | 'otp' | 'details';
 
@@ -82,9 +82,8 @@ export default function SignupPage() {
     setError(null);
     try {
       const appVerifier = window.recaptchaVerifier;
-      // Note: For a real app, you'd format the number properly. e.g., +234...
-      // Using a test number format that Firebase accepts.
-      const result = await signInWithPhoneNumber(auth, `+1${phoneNumber.replace(/\D/g, '')}`, appVerifier);
+      const formattedPhoneNumber = `+234${phoneNumber.replace(/\D/g, '')}`;
+      const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
       setConfirmationResult(result);
       setStep('otp');
     } catch (error: any) {
@@ -104,7 +103,6 @@ export default function SignupPage() {
     setError(null);
     try {
       await confirmationResult.confirm(otp);
-      // Phone number is verified. Now collect other details.
       setStep('details');
     } catch (error: any) {
       console.error("OTP Verify Error: ", error);
@@ -130,9 +128,6 @@ export default function SignupPage() {
     setError(null);
 
     try {
-        // The user is already authenticated via phone. Now we link email/password and create data.
-        // In a real app, you'd link the credentials. For this prototype, we'll create a new user record
-        // based on the phone-verified UID.
         const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
         const ztag = await generateUniqueZtag(name);
         const now = Timestamp.now();
@@ -154,7 +149,6 @@ export default function SignupPage() {
             updatedAt: now,
         });
         
-        // Add default wallets and transactions
         const walletsColRef = collection(userDocRef, 'wallets');
         const groceriesWalletRef = doc(walletsColRef);
         batch.set(groceriesWalletRef, {
@@ -164,10 +158,11 @@ export default function SignupPage() {
         batch.set(rentWalletRef, {
             userId: user.uid, name: "Rent", type: "goal", goalAmount: 200000, balance: 0, isLocked: true, createdAt: now
         });
+        
         const txColRef = collection(userDocRef, 'transactions');
         const initialTxRef = doc(txColRef);
         batch.set(initialTxRef, {
-            userId: user.uid, type: "topup", amount: 50000, status: "completed", description: "Initial balance", timestamp: now, category: "Income"
+            userId: user.uid, type: "income", amount: 50000, status: "completed", description: "Initial balance", timestamp: now, category: "Income"
         });
 
         await batch.commit();
@@ -175,7 +170,7 @@ export default function SignupPage() {
 
     } catch (error: any) {
         console.error("Final Signup Error: ", error);
-        setError('An unexpected error occurred. Please try again.');
+        setError('There was a problem setting up your account. Please try again.');
     } finally {
         setLoading(false);
     }
@@ -190,7 +185,13 @@ export default function SignupPage() {
               <CardTitle className="text-2xl">Create an Account</CardTitle>
               <CardDescription>Enter your phone number to get started.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6">
+              {error && (
+                <Alert variant="destructive">
+                    <AlertTitle>Signup Failed</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="flex items-center gap-2">
@@ -199,7 +200,7 @@ export default function SignupPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
+            <CardFooter className="flex flex-col gap-4 px-4 sm:px-6">
               <Button className="w-full" onClick={handleSendOtp} disabled={loading || !phoneNumber}>
                 {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Send OTP
@@ -212,15 +213,21 @@ export default function SignupPage() {
           <>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Verify Your Number</CardTitle>
-              <CardDescription>An OTP was sent to {`+1${phoneNumber.replace(/\D/g, '')}`}.</CardDescription>
+              <CardDescription>An OTP was sent to {`+234${phoneNumber.replace(/\D/g, '')}`}.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6">
+              {error && (
+                  <Alert variant="destructive">
+                      <AlertTitle>Verification Failed</AlertTitle>
+                      <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="otp">Verification Code</Label>
                 <Input id="otp" type="text" placeholder="Enter 6-digit code" required value={otp} onChange={(e) => setOtp(e.target.value)} />
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
+            <CardFooter className="flex flex-col gap-4 px-4 sm:px-6">
               <Button className="w-full" onClick={handleVerifyOtp} disabled={loading || otp.length < 6}>
                 {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Verify
@@ -236,7 +243,13 @@ export default function SignupPage() {
               <CardTitle className="text-2xl">Almost there!</CardTitle>
               <CardDescription>Complete your profile to finish setup.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6">
+               {error && (
+                  <Alert variant="destructive">
+                      <AlertTitle>Signup Failed</AlertTitle>
+                      <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input id="name" placeholder="Alex Doe" required value={name} onChange={(e) => setName(e.target.value)} />
@@ -250,7 +263,7 @@ export default function SignupPage() {
                 <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
+            <CardFooter className="flex flex-col gap-4 px-4 sm:px-6">
               <Button className="w-full" onClick={handleSignup} disabled={loading}>
                 {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Finish Signup
@@ -263,14 +276,8 @@ export default function SignupPage() {
 
   return (
     <>
-      {error && (
-        <Alert variant="destructive" className="mx-4 sm:mx-6 mt-4">
-            <AlertTitle>Signup Failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
       {renderStep()}
-      <div className="text-center text-sm pb-6">
+       <div className="text-center text-sm pb-6 px-4 sm:px-6">
           Already have an account?{" "}
           <Link href="/login" className="font-semibold text-primary">
             Log in
