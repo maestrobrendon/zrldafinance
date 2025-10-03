@@ -75,28 +75,24 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          'size': 'invisible',
-          'callback': (response: any) => {
-              // reCAPTCHA solved, allow signInWithPhoneNumber.
-          }
-      });
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'send-otp-button', {
+            'size': 'invisible',
+            'callback': (response: any) => {
+                // reCAPTCHA solved.
+                console.log("reCAPTCHA solved");
+            }
+        });
     }
-  }, []);
+  }
 
   const handleSendOtp = async () => {
     setLoading(true);
     setError(null);
     try {
-      if (!window.recaptchaVerifier) {
-          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-              'size': 'invisible',
-              'callback': () => { /* reCAPTCHA solved */ }
-          });
-      }
-      const appVerifier = window.recaptchaVerifier;
+      setupRecaptcha();
+      const appVerifier = window.recaptchaVerifier!;
       const formattedPhoneNumber = `+234${phoneNumber.replace(/\D/g, '')}`;
       const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
       setConfirmationResult(result);
@@ -106,14 +102,14 @@ export default function SignupPage() {
       setError("Failed to send OTP. Please check the number and try again. For testing, use numbers like 555-555-1234.");
       
       // Reset reCAPTCHA so user can try again
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.render().then(function(widgetId) {
-            // @ts-ignore
-            if (typeof grecaptcha !== 'undefined') {
-                grecaptcha.reset(widgetId);
-            }
-        });
-      }
+       if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.render().then(function(widgetId) {
+                // @ts-ignore
+                if (typeof grecaptcha !== 'undefined') {
+                    grecaptcha.reset(widgetId);
+                }
+            });
+        }
 
     } finally {
       setLoading(false);
@@ -227,7 +223,7 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4 px-4 sm:px-6">
-              <Button className="w-full" onClick={handleSendOtp} disabled={loading || !phoneNumber}>
+              <Button id="send-otp-button" className="w-full" onClick={handleSendOtp} disabled={loading || !phoneNumber}>
                 {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Send OTP
               </Button>
@@ -309,8 +305,6 @@ export default function SignupPage() {
             Log in
           </Link>
       </div>
-      {/* This invisible div is used by RecaptchaVerifier */}
-      <div id="recaptcha-container" />
     </>
   );
 }
