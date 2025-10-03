@@ -18,11 +18,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-
 // --- App Check ---
-// You will need to re-enable this after fixing the core auth issue.
-// const appCheckKey = "YOUR_APP_CHECK_SITE_KEY_HERE";
-/*
+const appCheckKey = "6LdRYN0rAAAAAKsJbamQolPsvSR76jYFI8FU2eaJ";
+
 if (typeof window !== "undefined") {
   try {
     const appCheck = initializeAppCheck(app, {
@@ -33,7 +31,6 @@ if (typeof window !== "undefined") {
     console.error("Failed to initialize App Check", error);
   }
 }
-*/
 
 const auth = getAuth(app);
 const db = getFirestore(app);
