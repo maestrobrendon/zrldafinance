@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   CardContent,
@@ -17,8 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch, addDoc } from "firebase/firestore";
+
+type Step = 'phone' | 'otp' | 'details';
 
 async function generateUniqueZtag(name: string): Promise<string> {
     let ztag = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
@@ -42,7 +44,7 @@ async function generateUniqueZtag(name: string): Promise<string> {
     }
 
     if (!isUnique) {
-        finalZtag = `user.${Math.random().toString(36).substring(2, 8)}`;
+        finalZtag = `user.${Date.now().toString().slice(-4)}`;
     }
     
     return finalZtag;
@@ -50,163 +52,232 @@ async function generateUniqueZtag(name: string): Promise<string> {
 
 export default function SignupPage() {
   const router = useRouter();
+  const [step, setStep] = useState<Step>('phone');
+  
+  // Form fields
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Firebase state
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+
+  // UI state
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async () => {
+  useEffect(() => {
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible',
+      'callback': (response: any) => {
+        // reCAPTCHA solved, allow signInWithPhoneNumber.
+      }
+    });
+  }, []);
+
+  const handleSendOtp = async () => {
     setLoading(true);
     setError(null);
-    if (!name || !email || !password) {
-        setError("Please fill in all fields.");
-        setLoading(false);
-        return;
-    }
-
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
-        
-        await updateProfile(user, {
-            displayName: name,
-            photoURL: newPhotoURL,
-        });
-
-        const ztag = await generateUniqueZtag(name);
-        const now = Timestamp.now();
-
-        const batch = writeBatch(db);
-
-        // 1. Create User Document
-        const userDocRef = doc(db, "users", user.uid);
-        batch.set(userDocRef, {
-            userId: user.uid,
-            email: user.email,
-            name: name,
-            fullName: name,
-            balance: 50000,
-            mainBalance: 50000,
-            zcashBalance: 10000,
-            kycStatus: 'pending',
-            currency: 'NGN',
-            photoURL: newPhotoURL,
-            profilePicture: newPhotoURL,
-            ztag: ztag,
-            phone: '',
-            createdAt: now,
-            updatedAt: now,
-        });
-        
-        // 2. Create Default Wallets
-        const walletsCollectionRef = collection(userDocRef, 'wallets');
-        const groceriesWalletRef = doc(walletsCollectionRef);
-        batch.set(groceriesWalletRef, {
-            name: "Groceries",
-            type: "budget",
-            targetAmount: 20000,
-            currentBalance: 5000,
-            balance: 5000,
-            locked: true,
-            createdAt: now,
-            updatedAt: now,
-        });
-
-        const rentWalletRef = doc(walletsCollectionRef);
-        batch.set(rentWalletRef, {
-            name: "Rent",
-            type: "goal",
-            targetAmount: 200000,
-            currentBalance: 0,
-            balance: 0,
-            locked: true,
-            createdAt: now,
-            updatedAt: now,
-        });
-
-        // 3. Create Default Transaction
-        const txCollectionRef = collection(userDocRef, 'transactions');
-        const initialTxRef = doc(txCollectionRef);
-        batch.set(initialTxRef, {
-            type: "topup",
-            amount: 50000,
-            status: "completed",
-            description: "Initial balance",
-            createdAt: now,
-            timestamp: now,
-            category: "Income"
-        });
-
-        await batch.commit();
-
-        router.push("/dashboard");
-
+      const appVerifier = window.recaptchaVerifier;
+      // Note: For a real app, you'd format the number properly. e.g., +234...
+      // Using a test number format that Firebase accepts.
+      const result = await signInWithPhoneNumber(auth, `+1${phoneNumber.replace(/\D/g, '')}`, appVerifier);
+      setConfirmationResult(result);
+      setStep('otp');
     } catch (error: any) {
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          setError('This email address is already in use by another account.');
-          break;
-        case 'auth/invalid-email':
-          setError('The email address is not valid.');
-          break;
-        case 'auth/weak-password':
-          setError('The password is too weak. It must be at least 6 characters long.');
-          break;
-        case 'permission-denied':
-            setError('There was a problem setting up your account. Please try again.');
-            break;
-        default:
-          setError('An unexpected error occurred. Please try again.');
-          break;
-      }
+      console.error("OTP Send Error: ", error);
+      setError("Failed to send OTP. Please check the number and try again. For testing, use numbers like 555-555-1234.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleVerifyOtp = async () => {
+    if (!confirmationResult) {
+      setError("An error occurred. Please try again.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await confirmationResult.confirm(otp);
+      // Phone number is verified. Now collect other details.
+      setStep('details');
+    } catch (error: any) {
+      console.error("OTP Verify Error: ", error);
+      setError("Invalid OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleSignup = async () => {
+    if (!name || !email || !password) {
+        setError("Please fill in all fields.");
+        return;
+    }
+    const user = auth.currentUser;
+    if (!user) {
+        setError("Your phone verification session has expired. Please start over.");
+        setStep('phone');
+        return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+        // The user is already authenticated via phone. Now we link email/password and create data.
+        // In a real app, you'd link the credentials. For this prototype, we'll create a new user record
+        // based on the phone-verified UID.
+        const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
+        const ztag = await generateUniqueZtag(name);
+        const now = Timestamp.now();
+        const batch = writeBatch(db);
+        const userDocRef = doc(db, "users", user.uid);
+
+        batch.set(userDocRef, {
+            userId: user.uid,
+            email: email,
+            name: name,
+            phone: user.phoneNumber,
+            photoURL: newPhotoURL,
+            ztag: ztag,
+            balance: 50000,
+            zcashBalance: 10000,
+            kycStatus: 'pending',
+            currency: 'NGN',
+            createdAt: now,
+            updatedAt: now,
+        });
+        
+        // Add default wallets and transactions
+        const walletsColRef = collection(userDocRef, 'wallets');
+        const groceriesWalletRef = doc(walletsColRef);
+        batch.set(groceriesWalletRef, {
+            userId: user.uid, name: "Groceries", type: "budget", limit: 20000, balance: 5000, isLocked: true, createdAt: now
+        });
+        const rentWalletRef = doc(walletsColRef);
+        batch.set(rentWalletRef, {
+            userId: user.uid, name: "Rent", type: "goal", goalAmount: 200000, balance: 0, isLocked: true, createdAt: now
+        });
+        const txColRef = collection(userDocRef, 'transactions');
+        const initialTxRef = doc(txColRef);
+        batch.set(initialTxRef, {
+            userId: user.uid, type: "topup", amount: 50000, status: "completed", description: "Initial balance", timestamp: now, category: "Income"
+        });
+
+        await batch.commit();
+        router.push("/dashboard");
+
+    } catch (error: any) {
+        console.error("Final Signup Error: ", error);
+        setError('An unexpected error occurred. Please try again.');
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const renderStep = () => {
+    switch (step) {
+      case 'phone':
+        return (
+          <>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Create an Account</CardTitle>
+              <CardDescription>Enter your phone number to get started.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" className="shrink-0">🇳🇬 +234</Button>
+                    <Input id="phone" type="tel" placeholder="801 234 5678" required value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <Button className="w-full" onClick={handleSendOtp} disabled={loading || !phoneNumber}>
+                {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Send OTP
+              </Button>
+            </CardFooter>
+          </>
+        );
+      case 'otp':
+        return (
+          <>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Verify Your Number</CardTitle>
+              <CardDescription>An OTP was sent to {`+1${phoneNumber.replace(/\D/g, '')}`}.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp">Verification Code</Label>
+                <Input id="otp" type="text" placeholder="Enter 6-digit code" required value={otp} onChange={(e) => setOtp(e.target.value)} />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <Button className="w-full" onClick={handleVerifyOtp} disabled={loading || otp.length < 6}>
+                {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Verify
+              </Button>
+               <Button variant="link" size="sm" onClick={() => setStep('phone')}>Change Number</Button>
+            </CardFooter>
+          </>
+        );
+      case 'details':
+        return (
+          <>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Almost there!</CardTitle>
+              <CardDescription>Complete your profile to finish setup.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" placeholder="Alex Doe" required value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="alex@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <Button className="w-full" onClick={handleSignup} disabled={loading}>
+                {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Finish Signup
+              </Button>
+            </CardFooter>
+          </>
+        );
+    }
+  };
+
   return (
     <>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Create an Account</CardTitle>
-        <CardDescription>
-          Join Zrlda Finance and take control of your finances.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-         {error && (
-            <Alert variant="destructive">
-                <AlertTitle>Signup Failed</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-            </Alert>
-        )}
-        <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
-          <Input id="name" placeholder="Alex Doe" required value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="alex@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
-      </CardContent>
-      <CardFooter className="flex flex-col gap-4">
-        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleSignup} disabled={loading}>
-           {loading && <Icons.logo className="mr-2 h-4 w-4 animate-spin" />}
-          Sign Up
-        </Button>
-        <div className="text-center text-sm">
+      {error && (
+        <Alert variant="destructive" className="mx-4 sm:mx-6 mt-4">
+            <AlertTitle>Signup Failed</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {renderStep()}
+      <div className="text-center text-sm pb-6">
           Already have an account?{" "}
-          <Link href="/login" className="underline text-primary">
+          <Link href="/login" className="font-semibold text-primary">
             Log in
           </Link>
-        </div>
-      </CardFooter>
+      </div>
+      {/* This invisible div is used by RecaptchaVerifier */}
+      <div id="recaptcha-container" />
     </>
   );
 }
