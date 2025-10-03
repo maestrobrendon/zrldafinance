@@ -25,7 +25,7 @@ type LoginMethod = 'phone' | 'email';
 
 declare global {
   interface Window {
-    recaptchaVerifier: RecaptchaVerifier;
+    recaptchaVerifier?: RecaptchaVerifier;
     confirmationResult?: ConfirmationResult;
   }
 }
@@ -62,6 +62,12 @@ export default function LoginPage() {
 
     if (loginMethod === 'phone') {
       try {
+        if (!window.recaptchaVerifier) {
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                'size': 'invisible',
+                'callback': () => { /* reCAPTCHA solved */ }
+            });
+        }
         const appVerifier = window.recaptchaVerifier;
         const formattedPhoneNumber = `+234${identifier.replace(/\D/g, '')}`;
         const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
@@ -73,7 +79,9 @@ export default function LoginPage() {
         if (window.recaptchaVerifier) {
             window.recaptchaVerifier.render().then(function(widgetId) {
                 // @ts-ignore
-                grecaptcha.reset(widgetId);
+                if (typeof grecaptcha !== 'undefined') {
+                    grecaptcha.reset(widgetId);
+                }
             });
         }
       } finally {

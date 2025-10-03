@@ -52,7 +52,7 @@ async function generateUniqueZtag(name: string): Promise<string> {
 
 declare global {
   interface Window {
-    recaptchaVerifier: RecaptchaVerifier;
+    recaptchaVerifier?: RecaptchaVerifier;
     confirmationResult?: ConfirmationResult;
   }
 }
@@ -76,13 +76,13 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            'size': 'invisible',
-            'callback': (response: any) => {
-                // reCAPTCHA solved, allow signInWithPhoneNumber.
-            }
-        });
+    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible',
+          'callback': (response: any) => {
+              // reCAPTCHA solved, allow signInWithPhoneNumber.
+          }
+      });
     }
   }, []);
 
@@ -90,6 +90,12 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
     try {
+      if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+              'size': 'invisible',
+              'callback': () => { /* reCAPTCHA solved */ }
+          });
+      }
       const appVerifier = window.recaptchaVerifier;
       const formattedPhoneNumber = `+234${phoneNumber.replace(/\D/g, '')}`;
       const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
@@ -100,10 +106,14 @@ export default function SignupPage() {
       setError("Failed to send OTP. Please check the number and try again. For testing, use numbers like 555-555-1234.");
       
       // Reset reCAPTCHA so user can try again
-      window.recaptchaVerifier.render().then(function(widgetId) {
-        // @ts-ignore
-        grecaptcha.reset(widgetId);
-      });
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.render().then(function(widgetId) {
+            // @ts-ignore
+            if (typeof grecaptcha !== 'undefined') {
+                grecaptcha.reset(widgetId);
+            }
+        });
+      }
 
     } finally {
       setLoading(false);
