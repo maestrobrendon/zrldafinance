@@ -50,6 +50,13 @@ async function generateUniqueZtag(name: string): Promise<string> {
     return finalZtag;
 }
 
+declare global {
+  interface Window {
+    recaptchaVerifier: RecaptchaVerifier;
+    confirmationResult?: ConfirmationResult;
+  }
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('phone');
@@ -69,12 +76,14 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': (response: any) => {
-        // reCAPTCHA solved, allow signInWithPhoneNumber.
-      }
-    });
+    if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            'size': 'invisible',
+            'callback': (response: any) => {
+                // reCAPTCHA solved, allow signInWithPhoneNumber.
+            }
+        });
+    }
   }, []);
 
   const handleSendOtp = async () => {
@@ -89,6 +98,13 @@ export default function SignupPage() {
     } catch (error: any) {
       console.error("OTP Send Error: ", error);
       setError("Failed to send OTP. Please check the number and try again. For testing, use numbers like 555-555-1234.");
+      
+      // Reset reCAPTCHA so user can try again
+      window.recaptchaVerifier.render().then(function(widgetId) {
+        // @ts-ignore
+        grecaptcha.reset(widgetId);
+      });
+
     } finally {
       setLoading(false);
     }
