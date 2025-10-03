@@ -1,9 +1,5 @@
 
 import type {NextConfig} from 'next';
-import { config } from 'dotenv';
-
-// Load environment variables from .env file
-config({ path: './.env' });
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -35,8 +31,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // The `env` key is automatically populated by Next.js with variables prefixed with NEXT_PUBLIC_.
-  // We just need to make sure they are loaded into the process, which `dotenv.config()` does.
 };
 
 export default nextConfig;
