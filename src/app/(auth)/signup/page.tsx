@@ -17,8 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, getDocs, collection, query, where, Timestamp, updateProfile, writeBatch } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch } from "firebase/firestore";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { OtpLoginForm } from "@/components/auth/otp-login-form";
 
 type Step = 'name' | 'email' | 'phone' | 'password' | 'ztag';
