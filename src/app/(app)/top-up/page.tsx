@@ -51,11 +51,26 @@ export default function TopUpPage() {
     }, []);
 
     const handleCopy = () => {
-        navigator.clipboard.writeText("0123456789");
-        toast({
-            title: "Copied!",
-            description: "Account number copied to clipboard.",
-        });
+        const accountNumber = "0123456789";
+        const textArea = document.createElement("textarea");
+        textArea.value = accountNumber;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            toast({
+                title: "Copied!",
+                description: "Account number copied to clipboard.",
+            });
+        } catch (err) {
+            toast({
+                variant: "destructive",
+                title: "Failed to copy",
+                description: "Could not copy account number.",
+            });
+        }
+        document.body.removeChild(textArea);
     };
     
     const handleTopUpWithCard = async () => {
@@ -111,7 +126,7 @@ export default function TopUpPage() {
 
     const renderSelectMethod = () => (
         <div className="space-y-4">
-            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedMethod('account')}>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedMethod('account'); setStep('form'); }}>
                 <CardHeader>
                     <CardTitle>Dedicated Account Number</CardTitle>
                     <CardDescription>Transfer to your unique account to top up.</CardDescription>
@@ -123,13 +138,13 @@ export default function TopUpPage() {
                     <CardDescription>Use your debit or credit card.</CardDescription>
                 </CardHeader>
             </Card>
-            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedMethod('bank')}>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedMethod('bank'); setStep('form'); }}>
                 <CardHeader>
                     <CardTitle>Top Up from Linked Bank</CardTitle>
                     <CardDescription>Directly debit a linked bank account.</CardDescription>
                 </CardHeader>
             </Card>
-            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedMethod('qr')}>
+            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedMethod('qr'); setStep('form'); }}>
                 <CardHeader>
                     <CardTitle>Top Up via QR Code</CardTitle>
                     <CardDescription>Scan a code to pay.</CardDescription>
@@ -310,3 +325,5 @@ export default function TopUpPage() {
         </div>
     );
 }
+
+    
