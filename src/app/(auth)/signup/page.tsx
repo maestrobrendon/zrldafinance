@@ -4,6 +4,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useForm, type FieldName } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   CardContent,
@@ -24,9 +27,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 type Step = 'name' | 'email' | 'username' | 'phone' | 'password' | 'ztag';
 
-async function checkZtagUniqueness(ztag: string): Promise<boolean> {
-    if (!ztag) return false;
-    const q = query(collection(db, "users"), where("ztag", "==", ztag.toLowerCase()));
+const signupSchema = z.object({
+  firstName: z.string().min(2, "First name must be at least 2 characters.").regex(/^[a-zA-Z]+$/, "First name can only contain letters."),
+  lastName: z.string().min(2, "Last name must be at least 2 characters.").regex(/^[a-zA-Z]+$/, "Last name can only contain letters."),
+  email: z.string().email("Please enter a valid email address."),
+  username: z.string().min(3, "Username must be 3-20 characters.").max(20, "Username must be 3-20 characters.").regex(/^[a-z0-9_]+$/, "Can only contain lowercase letters, numbers, and underscores."),
+  phone: z.string().optional(),
+  password: z.string().min(8, "Password must be at least 8 characters.").regex(/\d/, "Password must contain at least one number."),
+  confirmPassword: z.string(),
+  ztag: z.string().min(3, "@Ztag must be 3-15 characters.").max(15, "@Ztag must be 3-15 characters.").regex(/^[a-z0-9]+$/, "Can only contain lowercase letters and numbers."),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"],
+});
+
+type SignupFormData = z.infer<typeof signupSchema>;
+
+async function checkUniqueness(field: 'username' | 'ztag', value: string): Promise<boolean> {
+    if (!value) return false;
+    const q = query(collection(db, "users"), where(field, "==", value.toLowerCase()));
     const querySnapshot = await getDocs(q);
     return querySnapshot.empty;
 }
@@ -35,8 +54,10 @@ export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('name');
   
-  // Form data state
-  const [formData, setFormData] = useState({
+  const form = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    mode: "onChange",
+    defaultValues: {
       firstName: "",
       lastName: "",
       email: "",
@@ -45,103 +66,107 @@ export default function SignupPage() {
       password: "",
       confirmPassword: "",
       ztag: "",
+    },
   });
 
+  const { trigger, formState: { errors, isValid } } = form;
+
   // UI state
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isZtagChecking, setIsZtagChecking] = useState(false);
-  const [isZtagAvailable, setIsZtagAvailable] = useState<boolean | null>(null);
-  const [ztagSuggestion, setZtagSuggestion] = useState("");
+  const [isChecking, setIsChecking] = useState(false);
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [skipPhone, setSkipPhone] = useState(false);
 
-
   useEffect(() => {
-    if (step === 'ztag' && formData.firstName && !ztagSuggestion) {
-        const baseZtag = `${formData.firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}${formData.lastName.charAt(0).toLowerCase()}`;
-        const suggested = `${baseZtag}${Math.floor(100 + Math.random() * 900)}`;
-        setZtagSuggestion(suggested);
-        setFormData(prev => ({ ...prev, ztag: suggested }));
-        checkZtagUniqueness(suggested).then(setIsZtagAvailable);
+    if (step === 'ztag') {
+      const { firstName, lastName } = form.getValues();
+      if (firstName && !form.getValues('ztag')) {
+          const baseZtag = `${firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}${lastName.charAt(0).toLowerCase()}`;
+          const suggested = `${baseZtag}${Math.floor(100 + Math.random() * 900)}`;
+          form.setValue('ztag', suggested);
+          trigger('ztag');
+      }
     }
-  }, [step, formData.firstName, formData.lastName, ztagSuggestion]);
+  }, [step, form, trigger]);
+  
+  useEffect(() => {
+    const subscription = form.watch(async (value, { name }) => {
+        if (name === 'username' || name === 'ztag') {
+            setIsChecking(true);
+            setIsAvailable(null);
+            const fieldValue = value[name];
+            if (fieldValue && !errors[name]) {
+                const isUnique = await checkUniqueness(name, fieldValue);
+                setIsAvailable(isUnique);
+                if (!isUnique) {
+                    form.setError(name, { type: "manual", message: `This ${name} is already taken.` });
+                }
+            } else {
+                setIsAvailable(null);
+            }
+            setIsChecking(false);
+        }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, errors]);
 
-  const handleZtagChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newZtag = e.target.value;
-    setFormData(prev => ({ ...prev, ztag: newZtag }));
-    if (newZtag) {
-      setIsZtagChecking(true);
-      const isUnique = await checkZtagUniqueness(newZtag);
-      setIsZtagAvailable(isUnique);
-      setIsZtagChecking(false);
-    } else {
-      setIsZtagAvailable(null);
-    }
-  };
 
-  const handleNextStep = () => {
-    setError(null);
+  const handleNextStep = async () => {
+    setServerError(null);
+    let fieldsToValidate: FieldName<SignupFormData>[] = [];
+    let nextStep: Step | null = null;
+    
     switch (step) {
       case 'name':
-        if (!formData.firstName || !formData.lastName) {
-          setError("Please enter your first and last name.");
-          return;
-        }
-        setStep('email');
+        fieldsToValidate = ['firstName', 'lastName'];
+        nextStep = 'email';
         break;
       case 'email':
-        if (!formData.email.includes('@')) {
-          setError("Please enter a valid email address.");
-          return;
-        }
-        setStep('username');
+        fieldsToValidate = ['email'];
+        nextStep = 'username';
         break;
       case 'username':
-        if (!formData.username) {
-            setError("Please enter a username.");
-            return;
-        }
-        setStep('phone');
+        fieldsToValidate = ['username'];
+        nextStep = 'phone';
         break;
       case 'phone':
-        // This case is now handled by skip/OTP success
-        setStep('password');
+        // Skip validation, it's optional
+        nextStep = 'password';
         break;
       case 'password':
-        if (formData.password.length < 6) {
-          setError("Password must be at least 6 characters long.");
-          return;
-        }
-        if (formData.password !== formData.confirmPassword) {
-          setError("Passwords do not match.");
-          return;
-        }
-        setStep('ztag');
+        fieldsToValidate = ['password', 'confirmPassword'];
+        nextStep = 'ztag';
         break;
+    }
+    
+    const isStepValid = await trigger(fieldsToValidate);
+    if (isStepValid && nextStep) {
+        setStep(nextStep);
     }
   };
 
   const handleVerificationSuccess = (phone: string) => {
-    setFormData(prev => ({ ...prev, phone }));
+    form.setValue('phone', phone);
     setStep('password');
   };
 
-  const handleFinalSignup = async () => {
-    if (!isZtagAvailable) {
-        setError("The chosen @Ztag is not available. Please pick another one.");
+  const handleFinalSignup = async (data: SignupFormData) => {
+    if (!isAvailable && step === 'ztag') {
+        setServerError("The chosen @Ztag or username is not available.");
         return;
     }
 
     setLoading(true);
-    setError(null);
+    setServerError(null);
 
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const user = userCredential.user;
 
         await updateProfile(user, { 
-            displayName: `${formData.firstName} ${formData.lastName}` 
+            displayName: `${data.firstName} ${data.lastName}` 
         });
 
         const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
@@ -151,12 +176,12 @@ export default function SignupPage() {
 
         batch.set(userDocRef, {
             userId: user.uid,
-            email: formData.email,
-            username: formData.username,
-            name: `${formData.firstName} ${formData.lastName}`,
-            phone: formData.phone || null,
+            email: data.email,
+            username: data.username,
+            name: `${data.firstName} ${data.lastName}`,
+            phone: data.phone || null,
             photoURL: newPhotoURL,
-            ztag: formData.ztag.toLowerCase(),
+            ztag: data.ztag.toLowerCase(),
             balance: 50000,
             zcashBalance: 10000,
             kycStatus: 'pending',
@@ -187,10 +212,10 @@ export default function SignupPage() {
     } catch (error: any) {
         console.error("Final Signup Error: ", error);
         if (error.code === 'auth/email-already-in-use') {
-            setError("This email address is already registered. Please log in or use a different email.");
+            setServerError("This email address is already registered. Please log in or use a different email.");
             setStep('email');
         } else {
-            setError('There was a problem creating your account. Please try again.');
+            setServerError('There was a problem creating your account. Please try again.');
         }
     } finally {
         setLoading(false);
@@ -209,15 +234,17 @@ export default function SignupPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" placeholder="Alex" required value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+                <Input id="firstName" placeholder="Alex" {...form.register('firstName')} />
+                 {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" placeholder="Doe" required value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                <Input id="lastName" placeholder="Doe" {...form.register('lastName')} />
+                {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep} disabled={!formData.firstName || !formData.lastName}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.firstName || !!errors.lastName}>Next</Button>
             </CardFooter>
           </>
         );
@@ -231,11 +258,12 @@ export default function SignupPage() {
             <CardContent>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="alex.doe@example.com" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                <Input id="email" type="email" placeholder="alex.doe@example.com" {...form.register('email')} />
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep} disabled={!formData.email.includes('@')}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.email}>Next</Button>
             </CardFooter>
           </>
         );
@@ -249,11 +277,18 @@ export default function SignupPage() {
             <CardContent>
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
-                <Input id="username" placeholder="alexdoe" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} />
+                <Input id="username" placeholder="alexdoe" {...form.register('username')} />
+                 {isChecking ? (
+                    <p className="text-sm text-muted-foreground flex items-center pt-2"><Icons.logo className="mr-2 h-3 w-3 animate-spin"/> Checking...</p>
+                 ) : errors.username ? (
+                    <p className="text-sm text-destructive pt-2">{errors.username.message}</p>
+                 ) : isAvailable === true ? (
+                     <p className="text-sm text-green-500 pt-2">Username is available!</p>
+                 ) : null}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep} disabled={!formData.username}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.username || isChecking}>Next</Button>
             </CardFooter>
           </>
         );
@@ -299,15 +334,17 @@ export default function SignupPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                <Input id="password" type="password" {...form.register('password')} />
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input id="confirmPassword" type="password" required value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
+                <Input id="confirmPassword" type="password" {...form.register('confirmPassword')} />
+                {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep} disabled={!formData.password || formData.password.length < 6 || formData.password !== formData.confirmPassword}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.password || !!errors.confirmPassword}>Next</Button>
             </CardFooter>
           </>
         );
@@ -323,19 +360,19 @@ export default function SignupPage() {
                 <Label htmlFor="ztag">Your @Ztag</Label>
                 <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
-                    <Input id="ztag" placeholder={ztagSuggestion} className="pl-6" required value={formData.ztag} onChange={handleZtagChange} />
+                    <Input id="ztag" className="pl-6" {...form.register('ztag')} />
                 </div>
-                 {isZtagChecking ? (
+                 {isChecking ? (
                     <p className="text-sm text-muted-foreground flex items-center pt-2"><Icons.logo className="mr-2 h-3 w-3 animate-spin"/> Checking availability...</p>
-                 ) : isZtagAvailable === true ? (
-                    <p className="text-sm text-green-500 pt-2">@{formData.ztag} is available!</p>
-                 ) : isZtagAvailable === false ? (
-                    <p className="text-sm text-destructive pt-2">@{formData.ztag} is already taken.</p>
+                 ) : errors.ztag ? (
+                    <p className="text-sm text-destructive pt-2">{errors.ztag.message}</p>
+                 ) : isAvailable === true ? (
+                     <p className="text-sm text-green-500 pt-2">@{form.getValues('ztag')} is available!</p>
                  ) : null}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleFinalSignup} disabled={loading || !isZtagAvailable}>
+              <Button className="w-full" onClick={form.handleSubmit(handleFinalSignup)} disabled={loading || isChecking || !!errors.ztag || !isAvailable}>
                 {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Finish Signup
               </Button>
@@ -344,20 +381,33 @@ export default function SignupPage() {
         );
     }
   };
+  
+  const getPreviousStep = (): Step => {
+      switch(step) {
+          case 'email': return 'name';
+          case 'username': return 'email';
+          case 'phone': return 'username';
+          case 'password': return 'phone';
+          case 'ztag': return 'password';
+          default: return 'name';
+      }
+  }
 
   return (
     <>
-      {error && (
+      {serverError && (
         <Alert variant="destructive" className="mx-6 mb-4">
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{serverError}</AlertDescription>
         </Alert>
       )}
       {renderStepContent()}
       <div className="text-center text-sm pb-6 px-4 sm:px-6">
-        <Button variant="link" size="sm" onClick={() => setStep(step === 'name' ? 'name' : 'name' )}>
-            {step !== 'name' && `Back to: ${step === 'email' ? 'Name' : step === 'username' ? 'Email' : step === 'phone' ? 'Username' : step === 'password' ? 'Phone' : 'Password'}`}
-        </Button>
+        {step !== 'name' && 
+            <Button variant="link" size="sm" onClick={() => setStep(getPreviousStep())}>
+                Back
+            </Button>
+        }
         <p>Already have an account?{" "}
         <Link href="/login" className="font-semibold text-primary">
           Log in
