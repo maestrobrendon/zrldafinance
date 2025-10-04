@@ -1,8 +1,10 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { auth } from "@/lib/firebase";
+import { auth, app } from "@/lib/firebase";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 import AppSidebar from "@/components/layout/app-sidebar";
 import BottomNavbar from "@/components/layout/bottom-navbar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -14,6 +16,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Initialize App Check
+    if (typeof window !== "undefined") {
+      try {
+        initializeAppCheck(app, {
+          provider: new ReCaptchaV3Provider("6Lezi90rAAAAAMuN5llIGC-8Tq7gcONr1RcBx9H_"),
+          isTokenAutoRefreshEnabled: true,
+        });
+        console.log("App Check initialized");
+      } catch (error) {
+        console.error("Failed to initialize App Check", error);
+      }
+    }
+
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
         // Allow access to signup/login while preventing redirect loops

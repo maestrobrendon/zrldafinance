@@ -18,23 +18,6 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// --- App Check (Temporarily Disabled) ---
-// The following code is temporarily commented out to debug a reCAPTCHA error.
-// We can re-enable it after verifying the rest of the Firebase functionality.
-
-const appCheckKey = "6LdRYN0rAAAAAKsJbamQolPsvSR76jYFI8FU2eaJ";
-
-if (typeof window !== "undefined") {
-  try {
-    const appCheck = initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(appCheckKey),
-      isTokenAutoRefreshEnabled: true
-    });
-  } catch (error) {
-    console.error("Failed to initialize App Check", error);
-  }
-}
-
 const auth = getAuth(app);
 const db = getFirestore(app);
 
