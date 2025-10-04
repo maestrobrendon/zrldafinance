@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   CardContent,
@@ -17,10 +17,12 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { auth, db } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch, updateDoc } from "firebase/firestore";
+import { OtpLoginForm } from "@/components/auth/otp-login-form";
+import { updateProfile } from "firebase/auth";
 
-type Step = 'phone' | 'otp' | 'details';
+
+type Step = 'phone' | 'details';
 
 async function generateUniqueZtag(name: string): Promise<string> {
     let ztag = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
@@ -50,95 +52,22 @@ async function generateUniqueZtag(name: string): Promise<string> {
     return finalZtag;
 }
 
-declare global {
-  interface Window {
-    recaptchaVerifier?: RecaptchaVerifier;
-    confirmationResult?: ConfirmationResult;
-  }
-}
-
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('phone');
   
   // Form fields
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  // Firebase state
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   // UI state
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
-      // It's important that the container is visible, but we can make it invisible with CSS.
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          console.log("reCAPTCHA solved");
-        }
-      });
-    }
-  }, []);
-
-
-  const handleSendOtp = async () => {
-    setLoading(true);
-    setError(null);
-    if (!window.recaptchaVerifier) {
-        setError("reCAPTCHA not initialized. Please refresh the page.");
-        setLoading(false);
-        return;
-    }
-
-    try {
-      const appVerifier = window.recaptchaVerifier;
-      const formattedPhoneNumber = `+234${phoneNumber.replace(/\D/g, '')}`;
-      const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
-      setConfirmationResult(result);
-      setStep('otp');
-    } catch (error: any) {
-      console.error("OTP Send Error: ", error);
-      setError("Failed to send OTP. Please check the number and try again. For testing, use numbers like 555-555-1234.");
-      
-      // Reset reCAPTCHA so user can try again
-       if (window.recaptchaVerifier) {
-            window.recaptchaVerifier.render().then(function(widgetId) {
-                // @ts-ignore
-                if (typeof grecaptcha !== 'undefined') {
-                    grecaptcha.reset(widgetId);
-                }
-            });
-        }
-
-    } finally {
-      setLoading(false);
-    }
+  const handleVerificationSuccess = () => {
+    setStep('details');
   };
-
-  const handleVerifyOtp = async () => {
-    if (!confirmationResult) {
-      setError("An error occurred. Please try again.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      await confirmationResult.confirm(otp);
-      setStep('details');
-    } catch (error: any) {
-      console.error("OTP Verify Error: ", error);
-      setError("Invalid OTP. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const handleSignup = async () => {
     if (!name || !email || !password) {
@@ -156,6 +85,13 @@ export default function SignupPage() {
     setError(null);
 
     try {
+        await updateProfile(user, { displayName: name });
+        await updateDoc(doc(db, "users", user.uid), {
+            email: email,
+            // Note: We don't update the password here. Firebase Auth handles that separately.
+        });
+
+
         const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
         const ztag = await generateUniqueZtag(name);
         const now = Timestamp.now();
@@ -175,7 +111,7 @@ export default function SignupPage() {
             currency: 'NGN',
             createdAt: now,
             updatedAt: now,
-        });
+        }, { merge: true });
         
         const walletsColRef = collection(userDocRef, 'wallets');
         const groceriesWalletRef = doc(walletsColRef);
@@ -213,56 +149,9 @@ export default function SignupPage() {
               <CardTitle className="text-2xl">Create an Account</CardTitle>
               <CardDescription>Enter your phone number to get started.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 px-4 sm:px-6">
-              <div id="recaptcha-container"></div>
-              {error && (
-                <Alert variant="destructive">
-                    <AlertTitle>Signup Failed</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" className="shrink-0">🇳🇬 +234</Button>
-                    <Input id="phone" type="tel" placeholder="801 234 5678" required value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
-                </div>
-              </div>
+            <CardContent className="px-4 sm:px-6">
+              <OtpLoginForm onSuccess={handleVerificationSuccess} />
             </CardContent>
-            <CardFooter className="flex flex-col gap-4 px-4 sm:px-6">
-              <Button id="send-otp-button" className="w-full" onClick={handleSendOtp} disabled={loading || !phoneNumber}>
-                {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Send OTP
-              </Button>
-            </CardFooter>
-          </>
-        );
-      case 'otp':
-        return (
-          <>
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Verify Your Number</CardTitle>
-              <CardDescription>An OTP was sent to {`+234${phoneNumber.replace(/\D/g, '')}`}.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 px-4 sm:px-6">
-              {error && (
-                  <Alert variant="destructive">
-                      <AlertTitle>Verification Failed</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="otp">Verification Code</Label>
-                <Input id="otp" type="text" placeholder="Enter 6-digit code" required value={otp} onChange={(e) => setOtp(e.target.value)} />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4 px-4 sm:px-6">
-              <Button className="w-full" onClick={handleVerifyOtp} disabled={loading || otp.length < 6}>
-                {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Verify
-              </Button>
-               <Button variant="link" size="sm" onClick={() => setStep('phone')}>Change Number</Button>
-            </CardFooter>
           </>
         );
       case 'details':
