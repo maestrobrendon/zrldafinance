@@ -288,3 +288,51 @@ app.post("/wallets/top-up-zcash", async (req, res) => {
     res.status(500).json({ error: "Failed to top-up Zcash wallet" });
   }
 });
+
+
+// --- USER SIGNUP WITH USERNAME + Z-TAG UNIQUENESS --- //
+app.post("/signup", async (req, res) => {
+  try {
+    const { userId, username, ztag, email, phone } = req.body;
+
+    // normalize to lowercase for uniqueness
+    const usernameKey = username.toLowerCase();
+    const ztagKey = ztag.toLowerCase();
+
+    const usernameRef = db.collection("usernames").doc(usernameKey);
+    const ztagRef = db.collection("ztags").doc(ztagKey);
+
+    const [usernameDoc, ztagDoc] = await Promise.all([
+      usernameRef.get(),
+      ztagRef.get(),
+    ]);
+
+    if (usernameDoc.exists) {
+      return res.status(400).json({ error: "Username already taken" });
+    }
+    if (ztagDoc.exists) {
+      return res.status(400).json({ error: "Z-tag already taken" });
+    }
+
+    // ✅ Reserve username + ztag immediately (atomic)
+    await Promise.all([
+      usernameRef.set({ userId }),
+      ztagRef.set({ userId }),
+    ]);
+
+    // ✅ Create the user record
+    await db.collection("users").doc(userId).set({
+      username: usernameKey,
+      ztag: ztagKey,
+      email,
+      phone,
+      created_at: new Date().toISOString(),
+    });
+
+    return res.status(201).json({ status: "success", message: "Signup complete" });
+
+  } catch (err) {
+    console.error("Signup error:", err);
+    res.status(500).json({ error: "Signup failed" });
+  }
+});

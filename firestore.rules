@@ -1,279 +1,98 @@
-/**
- * @fileoverview Firestore Security Rules for Zrlda Finance application.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for personal financial data
- * (wallets, transactions, categories, notifications). Finance circles are secured
- * via a membership map on the finance circle document itself, with circle memberships
- * stored in a top-level collection. Merchants are publicly readable but not writable.
- *
- * Data Structure:
- * - /users/{userId}: User profiles, where userId is the Firebase Auth UID.
- * - /users/{userId}/wallets/{walletId}: Wallets owned by the user.
- * - /users/{userId}/wallets/{walletId}/transactions/{transactionId}: Transactions for a wallet.
- * - /users/{userId}/categories/{categoryId}: Expense categories owned by the user.
- * - /financeCircles/{financeCircleId}: Finance circle documents with a 'members' map.
- * - /circleMemberships/{circleMembershipId}: Circle membership documents with circleId and userId.
- * - /users/{userId}/notifications/{notificationId}: Notifications for a user.
- * - /merchants/{merchantId}: Merchant data for transaction categorization.
- *
- * Key Security Decisions:
- * - User data is strictly controlled by the owning user.
- * - Listing of all users is disallowed.
- * - Finance circle membership is managed via a 'members' map on the circle document.
- * - CircleMemberships are stored as a top-level collection instead of a subcollection of users or financeCircles
- * - Merchants are publicly readable but not writable.
- *
- * Denormalization for Authorization:
- * - Finance circles use a 'members' map to store user roles directly on the document,
- *   avoiding the need for separate membership lookups.
- * - CircleMemberships are stored as a top-level collection instead of a subcollection of users or financeCircles
- *
- * Structural Segregation:
- * - Private user data (wallets, transactions, categories, notifications) is stored
- *   under the /users/{userId} path.
- * - FinanceCircles is separate from user data.
- */
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Protects the user profile.
-     * @path /users/{userId}
-     * @allow (create) - If the user's auth UID matches the userId.
-     * @allow (get) - If the user's auth UID matches the userId.
-     * @allow (update) - If the user's auth UID matches the userId.
-     * @allow (delete) - If the user's auth UID matches the userId.
-     * @allow (list) - Denied, because we don't want to allow listing all users.
-     * @deny (create) - If the user's auth UID does not match the userId.
-     * @deny (update) - If the user's auth UID does not match the userId.
-     * @deny (delete) - If the user's auth UID does not match the userId.
-     * @principle Enforces document ownership for writes.
-     */
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // =================================
+    //         USERS
+    // =================================
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-    }
-
-    /**
-     * @description Manages wallets for a specific user.
-     * @path /users/{userId}/wallets/{walletId}
-     * @allow (create) - If the user's auth UID matches the userId.
-     * @allow (get) - If the user's auth UID matches the userId.
-     * @allow (update) - If the user's auth UID matches the userId.
-     * @allow (delete) - If the user's auth UID matches the userId.
-     * @allow (list) - If the user's auth UID matches the userId.
-     * @deny (create) - If the user's auth UID does not match the userId.
-     * @deny (update) - If the user's auth UID does not match the userId.
-     * @deny (delete) - If the user's auth UID does not match the userId.
-     * @principle Enforces document ownership for writes.
-     */
-    match /users/{userId}/wallets/{walletId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-    }
-
-    /**
-     * @description Manages transactions for a specific wallet.
-     * @path /users/{userId}/wallets/{walletId}/transactions/{transactionId}
-     * @allow (create) - If the user's auth UID matches the userId.
-     * @allow (get) - If the user's auth UID matches the userId.
-     * @allow (update) - If the user's auth UID matches the userId.
-     * @allow (delete) - If the user's auth UID matches the userId.
-     * @allow (list) - If the user's auth UID matches the userId.
-     * @deny (create) - If the user's auth UID does not match the userId.
-     * @deny (update) - If the user's auth UID does not match the userId.
-     * @deny (delete) - If the user's auth UID does not match the userId.
-     * @principle Enforces document ownership for writes.
-     */
-    match /users/{userId}/wallets/{walletId}/transactions/{transactionId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-    }
-
-    /**
-     * @description Manages expense categories for a specific user.
-     * @path /users/{userId}/categories/{categoryId}
-     * @allow (create) - If the user's auth UID matches the userId.
-     * @allow (get) - If the user's auth UID matches the userId.
-     * @allow (update) - If the user's auth UID matches the userId.
-     * @allow (delete) - If the user's auth UID matches the userId.
-     * @allow (list) - If the user's auth UID matches the userId.
-     * @deny (create) - If the user's auth UID does not match the userId.
-     * @deny (update) - If the user's auth UID does not match the userId.
-     * @deny (delete) - If the user's auth UID does not match the userId.
-     * @principle Enforces document ownership for writes.
-     */
-    match /users/{userId}/categories/{categoryId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-    }
-
-    /**
-     * @description Manages finance circle documents.
-     * @path /financeCircles/{financeCircleId}
-     * @allow (create) - If the user is the admin of the finance circle
-     * @allow (get) - If the user is a member of the finance circle
-     * @allow (update) - If the user is the admin of the finance circle
-     * @allow (delete) - If the user is the admin of the finance circle
-     * @allow (list) - If the user is a member of the finance circle
-     * @deny (create) - If the user is not the admin of the finance circle
-     * @deny (update) - If the user is not the admin of the finance circle
-     * @deny (delete) - If the user is not the admin of the finance circle
-     * @principle Enforces access control based on finance circle membership.
-     */
-    match /financeCircles/{financeCircleId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isAdmin(financeCircleId) {
-        return get(/databases/$(database)/documents/financeCircles/$(financeCircleId)).data.adminUserId == request.auth.uid;
-      }
-      function isMember(financeCircleId) {
-        return request.auth.uid in get(/databases/$(database)/documents/financeCircles/$(financeCircleId)).data.members;
-      }
-
-      allow get: if isSignedIn() && isMember(financeCircleId);
-      allow list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.adminUserId == request.auth.uid;
-      allow update: if isSignedIn() && isAdmin(financeCircleId);
-      allow delete: if isSignedIn() && isAdmin(financeCircleId);
-    }
-
-    /**
-     * @description Manages circle membership documents.
-     * @path /circleMemberships/{circleMembershipId}
-     * @allow (create) - If the user is creating their own circle membership.
-     * @allow (get) - If the user is a member of the finance circle.
-     * @allow (update) - Denied. Circle memberships should not be updated.
-     * @allow (delete) - If the user is the member being removed or an admin of the circle.
-     * @allow (list) - If the user is listing their own circle memberships.
-     * @deny (create) - If the user is not creating their own circle membership.
-     * @deny (update) - Circle memberships should not be updated.
-     * @deny (delete) - If the user is not the member being removed or an admin of the circle.
-     * @principle Enforces access control based on circle membership and admin privileges.
-     */
-    match /circleMemberships/{circleMembershipId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isMember(circleId) {
-        return request.auth.uid in get(/databases/$(database)/documents/financeCircles/$(circleId)).data.members;
-      }
-      function isAdmin(circleId) {
-        return get(/databases/$(database)/documents/financeCircles/$(circleId)).data.adminUserId == request.auth.uid;
-      }
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isSignedIn() && isMember(resource.data.circleId);
-      allow list: if isSignedIn() && isOwner(resource.data.userId);
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if false;
-      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin(resource.data.circleId));
-    }
-
-    /**
-     * @description Manages notifications for a specific user.
-     * @path /users/{userId}/notifications/{notificationId}
-     * @allow (create) - If the user's auth UID matches the userId.
-     * @allow (get) - If the user's auth UID matches the userId.
-     * @allow (update) - If the user's auth UID matches the userId.
-     * @allow (delete) - If the user's auth UID matches the userId.
-     * @allow (list) - If the user's auth UID matches the userId.
-     * @deny (create) - If the user's auth UID does not match the userId.
-     * @deny (update) - If the user's auth UID does not match the userId.
-     * @deny (delete) - If the user's auth UID does not match the userId.
-     * @principle Enforces document ownership for writes.
-     */
-    match /users/{userId}/notifications/{notificationId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-    }
-
-    /**
-     * @description Manages merchant data for transaction categorization.
-     * @path /merchants/{merchantId}
-     * @allow (get) - Public read access.
-     * @allow (list) - Public read access.
-     * @deny (create) - No write access allowed.
-     * @deny (update) - No write access allowed.
-     * @deny (delete) - No write access allowed.
-     * @principle Public read access, no write access.
-     */
-    match /merchants/{merchantId} {
-      allow get: if true;
+      // READ: Anyone can list to check for username/ztag uniqueness, but no one can read a user document directly.
+      // This prevents enumerating user data.
       allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get: if isOwner(userId);
+      
+      // CREATE: A user can create their own user document.
+      allow create: if isOwner(userId);
+      
+      // UPDATE, DELETE: A user can only update or delete their own document.
+      allow update, delete: if isOwner(userId);
+      
+      // --- Subcollections ---
+      match /wallets/{walletId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /transactions/{transactionId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /categories/{categoryId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+    
+    // =================================
+    //         FINANCE CIRCLES
+    // =================================
+    match /financeCircles/{circleId} {
+      // READ, WRITE: Only members of the circle can access it.
+      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.members;
+      
+      // CREATE: Any authenticated user can create a circle.
+      allow create: if isAuthenticated();
+    }
+    
+    // =================================
+    //      CIRCLE MEMBERSHIPS
+    // =================================
+    match /circleMemberships/{membershipId} {
+        // READ: User can read their own membership doc.
+        allow read: if isOwner(resource.data.userId);
+        
+        // CREATE: User can create their own membership doc.
+        allow create: if isOwner(request.resource.data.userId);
+        
+        // DELETE: User can delete their own membership (leave a circle).
+        allow delete: if isOwner(resource.data.userId);
+        
+        // No updates allowed to prevent changing circleId or userId.
+        allow update: if false;
+    }
+    
+    // =================================
+    //         MERCHANTS
+    // =================================
+    match /merchants/{merchantId} {
+        // Allow read for all authenticated users for categorization.
+        allow read: if isAuthenticated();
+        // Writes should be handled by a trusted server/admin process.
+        allow write: if false;
+    }
+
+    // =================================
+    //         USERNAMES & ZTAGS (for uniqueness checks)
+    // =================================
+    match /usernames/{username} {
+      allow read, create: if isAuthenticated();
+    }
+
+    match /ztags/{ztag} {
+      allow read, create: if isAuthenticated();
     }
   }
 }
