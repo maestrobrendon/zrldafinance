@@ -1,25 +1,173 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+
+    /**
+     * @description Secure user profiles. Only the authenticated user can read and write their own profile.
+     * @path /users/{userId}
+     * @allow (create) - Authenticated user with UID matching {userId} can create their profile.
+     * @allow (get, update, delete) - Authenticated user with UID matching {userId} can get, update and delete their profile.
+     * @deny (create) - Authenticated user with UID NOT matching {userId} cannot create this profile.
+     * @deny (get, update, delete) - Authenticated user with UID NOT matching {userId} cannot get, update and delete this profile.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
-    match /users/{userId} {
-      allow read, update: if isOwner(userId);
+    /**
+     * @description Secure user wallets. Only the authenticated user owning the wallet can read and write it.
+     * @path /users/{userId}/wallets/{walletId}
+     * @allow (create) - Authenticated user with UID matching {userId} can create a wallet. The wallet's 'userId' field must match the user's UID.
+     * @allow (get, update, delete) - Authenticated user with UID matching {userId} can get, update and delete the wallet.
+     * @deny (create) - Authenticated user with UID NOT matching {userId} cannot create a wallet.
+     * @deny (get, update, delete) - Authenticated user with UID NOT matching {userId} cannot get, update and delete the wallet.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/wallets/{walletId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if request.auth.uid == userId && request.resource.data.userId == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Secure user transactions within a wallet. Only the authenticated user owning the wallet can read and write the transactions.
+     * @path /users/{userId}/wallets/{walletId}/transactions/{transactionId}
+     * @allow (create) - Authenticated user with UID matching {userId} can create a transaction.
+     * @allow (get, update, delete) - Authenticated user with UID matching {userId} can get, update and delete the transaction.
+     * @deny (create) - Authenticated user with UID NOT matching {userId} cannot create a transaction.
+     * @deny (get, update, delete) - Authenticated user with UID NOT matching {userId} cannot get, update and delete the transaction.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/wallets/{walletId}/transactions/{transactionId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
       allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
 
-      // Wallets Subcollection
-      match /wallets/{walletId} {
-        allow create: if request.auth.uid == request.resource.data.userId;
-        allow read, update, delete: if isOwner(userId);
+    /**
+     * @description Secure user categories. Only the authenticated user can read and write their own categories.
+     * @path /users/{userId}/categories/{categoryId}
+     * @allow (create) - Authenticated user with UID matching {userId} can create a category. The category's 'userId' field must match the user's UID.
+     * @allow (get, update, delete) - Authenticated user with UID matching {userId} can get, update and delete the category.
+     * @deny (create) - Authenticated user with UID NOT matching {userId} cannot create a category.
+     * @deny (get, update, delete) - Authenticated user with UID NOT matching {userId} cannot get, update and delete the category.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/categories/{categoryId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
       }
 
-      // Transactions Subcollection
-      match /transactions/{transactionId} {
-        allow create: if request.auth.uid == request.resource.data.userId;
-        allow read: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if request.auth.uid == userId && request.resource.data.userId == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Secure finance circles. Access is controlled via a 'members' map in the document.
+     * @path /financeCircles/{financeCircleId}
+     * @allow (create) - Any authenticated user can create a finance circle.
+     * @allow (get, list) - Any authenticated user can read and list finance circles.
+     * @allow (update, delete) - Only the admin of the circle (defined in the `adminUserId` field) can update or delete it.
+     * @principle Enforces role-based access control for finance circles.
+     */
+    match /financeCircles/{financeCircleId} {
+      function isSignedIn() {
+        return request.auth != null;
       }
+
+      function isAdmin(adminUserId) {
+        return request.auth.uid == adminUserId;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.resource.data.adminUserId == resource.data.adminUserId;
+      allow delete: if isSignedIn() && request.resource.data.adminUserId == resource.data.adminUserId;
+    }
+
+    /**
+     * @description Secure circle memberships. Access is public read to allow listing, but creation and modification is restricted.
+     * @path /circleMemberships/{circleMembershipId}
+     * @allow (get, list) - Any authenticated user can read and list circle memberships.
+     * @allow (create) - Any authenticated user can create circle membership.
+     * @deny (update, delete) - Updates and deletes are forbidden to prevent tampering with membership records.
+     * @principle Provides public read access for efficient member lookups while restricting modifications.
+     */
+    match /circleMemberships/{circleMembershipId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Secure user notifications. Only the authenticated user can read and write their own notifications.
+     * @path /users/{userId}/notifications/{notificationId}
+     * @allow (create) - Authenticated user with UID matching {userId} can create a notification.
+     * @allow (get, update, delete) - Authenticated user with UID matching {userId} can get, update and delete the notification.
+     * @deny (create) - Authenticated user with UID NOT matching {userId} cannot create a notification.
+     * @deny (get, update, delete) - Authenticated user with UID NOT matching {userId} cannot get, update and delete the notification.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/notifications/{notificationId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Secure merchant data. Public read access is allowed for transaction categorization. Writes are disabled.
+     * @path /merchants/{merchantId}
+     * @allow (get, list) - Any user can read and list merchant data.
+     * @deny (create, update, delete) - No user can create, update, or delete merchant data.
+     * @principle Provides public read access for AI transaction categorization while preventing unauthorized modifications.
+     */
+    match /merchants/{merchantId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }

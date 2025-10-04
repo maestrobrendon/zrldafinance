@@ -1,0 +1,450 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Zrlda Finance application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "User's phone number."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        },
+        "dateJoined": {
+          "type": "string",
+          "description": "Date and time the user joined the application.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "dateJoined"
+      ]
+    },
+    "Wallet": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Wallet",
+      "type": "object",
+      "description": "Represents a user's wallet for managing funds.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the wallet."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Wallet)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the wallet."
+        },
+        "balance": {
+          "type": "number",
+          "description": "Current balance of the wallet."
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency of the wallet (e.g., USD, EUR)."
+        },
+        "goal": {
+          "type": "number",
+          "description": "Financial goal set for the wallet, if any."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "balance",
+        "currency"
+      ]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a financial transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the transaction."
+        },
+        "walletId": {
+          "type": "string",
+          "description": "Reference to Wallet. (Relationship: Wallet 1:N Transaction)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the transaction."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of transaction (e.g., deposit, withdrawal, payment)."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date and time of the transaction.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the transaction."
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to Category. (Relationship: Category 1:N Transaction)"
+        }
+      },
+      "required": [
+        "id",
+        "walletId",
+        "amount",
+        "type",
+        "date",
+        "description"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category for classifying expenses.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the category."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the category (e.g., Food, Transportation, Entertainment)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the category."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Category)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "userId"
+      ]
+    },
+    "FinanceCircle": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FinanceCircle",
+      "type": "object",
+      "description": "Represents a group saving circle.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the finance circle."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the finance circle."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the finance circle."
+        },
+        "goal": {
+          "type": "number",
+          "description": "Financial goal for the circle."
+        },
+        "adminUserId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N FinanceCircle, representing the admin)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "goal",
+        "adminUserId"
+      ]
+    },
+    "CircleMembership": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CircleMembership",
+      "type": "object",
+      "description": "Represents a user's membership in a finance circle.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the circle membership."
+        },
+        "circleId": {
+          "type": "string",
+          "description": "Reference to FinanceCircle. (Relationship: FinanceCircle 1:N CircleMembership)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N CircleMembership)"
+        },
+        "joinDate": {
+          "type": "string",
+          "description": "Date the user joined the circle.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "circleId",
+        "userId",
+        "joinDate"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification sent to a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notification."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Notification)"
+        },
+        "message": {
+          "type": "string",
+          "description": "Message content of the notification."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of notification (e.g., payment reminder, circle update)."
+        },
+        "dateSent": {
+          "type": "string",
+          "description": "Date and time the notification was sent.",
+          "format": "date-time"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Indicates whether the notification has been read."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "message",
+        "type",
+        "dateSent",
+        "isRead"
+      ]
+    },
+    "Merchant": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Merchant",
+      "type": "object",
+      "description": "Represents a merchant for transaction categorization learning.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the merchant."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the merchant."
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to Category. (Relationship: Category 1:N Merchant)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "categoryId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Each user has their own document. The 'userId' parameter is the Firebase Auth UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/wallets/{walletId}",
+        "definition": {
+          "entityName": "Wallet",
+          "schema": {
+            "$ref": "#/backend/entities/Wallet"
+          },
+          "description": "Stores wallets owned by a specific user. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            },
+            {
+              "name": "walletId",
+              "description": "The unique ID of the wallet."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/wallets/{walletId}/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores transactions for a specific wallet. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            },
+            {
+              "name": "walletId",
+              "description": "The unique ID of the wallet."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique ID of the transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores expense categories for a specific user. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            },
+            {
+              "name": "categoryId",
+              "description": "The unique ID of the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/financeCircles/{financeCircleId}",
+        "definition": {
+          "entityName": "FinanceCircle",
+          "schema": {
+            "$ref": "#/backend/entities/FinanceCircle"
+          },
+          "description": "Stores finance circle documents. Includes a 'members' map for authorization independence.",
+          "params": [
+            {
+              "name": "financeCircleId",
+              "description": "The unique ID of the finance circle."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/circleMemberships/{circleMembershipId}",
+        "definition": {
+          "entityName": "CircleMembership",
+          "schema": {
+            "$ref": "#/backend/entities/CircleMembership"
+          },
+          "description": "Stores circle membership documents. Facilitates efficient member lookups without hierarchical dependencies.",
+          "params": [
+            {
+              "name": "circleMembershipId",
+              "description": "The unique ID of the circle membership."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Stores notifications for a specific user. Path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            },
+            {
+              "name": "notificationId",
+              "description": "The unique ID of the notification."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/merchants/{merchantId}",
+        "definition": {
+          "entityName": "Merchant",
+          "schema": {
+            "$ref": "#/backend/entities/Merchant"
+          },
+          "description": "Stores merchant data for transaction categorization. No explicit ownership is enforced at the database level.",
+          "params": [
+            {
+              "name": "merchantId",
+              "description": "The unique ID of the merchant."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the Zrlda Finance application, emphasizing security, scalability, and ease of debugging, in accordance with the specified design principles. Authorization Independence is achieved via path-based ownership. The structure supports the required QAPs by segregating user-specific data into path-based collections and using membership maps for collaborative entities like FinanceCircles.\n\n**Users:** User data is stored under the `/users/{userId}` collection, ensuring private access based on user ID.\n\n**Wallets:** Wallets are stored as subcollections of users (`/users/{userId}/wallets/{walletId}`), providing a clear ownership structure. This allows for easy retrieval of a user's wallets and simplifies security rules.\n\n**Transactions:** Transactions are stored as subcollections of Wallets (`/users/{userId}/wallets/{walletId}/transactions/{transactionId}`). This maintains the relationship between users, wallets, and transactions, enabling efficient data retrieval and simple, secure rules based on user ownership.\n\n**Categories:** Categories are stored as subcollections of users (`/users/{userId}/categories/{categoryId}`). This allows each user to manage their own categories. \n\n**Finance Circles:** The `financeCircles` collection stores the finance circle documents. The `members` map inside each `financeCircle` document keeps track of members and their roles. The `adminUserId` indicates the admin of the group. This design allows efficient querying of circle data and membership validation without complex `get()` calls in security rules. Circle Memberships are NOT stored as a subcollection. Instead, `circleMemberships` are stored in a top-level collection, to facilitate listing all circle memberships for a user, enabling the `QAP` of efficient member lookups. A denormalized copy of relevant `financeCircles` data (e.g., name, description) should be stored in the `circleMemberships` document to allow listing of circle memberships with the circle name. This denormalization removes the need for a `get()` call in the rules when displaying a list of memberships.\n\n**Circle Memberships:** To avoid authorization dependencies, circle memberships are stored in a top-level collection `/circleMemberships/{circleMembershipId}`. Each document contains the `circleId` and the `userId`, facilitating easy querying of a user's circle memberships and ensuring authorization independence.\n\n**Notifications:** Notifications are stored under the `/users/{userId}/notifications/{notificationId}` collection, providing a direct link to the user who should receive the notification.\n\n**Merchants:** Merchants are stored in a top-level `/merchants/{merchantId}` collection. No explicit ownership is enforced at the database level for merchants, as they are used to categorize transactions and are used in conjunction with an AI service."
+  }
+}
