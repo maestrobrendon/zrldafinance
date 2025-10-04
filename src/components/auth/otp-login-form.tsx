@@ -87,7 +87,11 @@ export function OtpLoginForm({ onSuccess }: OtpLoginFormProps) {
     setError(null);
     try {
       const appVerifier = window.recaptchaVerifier!;
-      const formattedPhoneNumber = `+234${data.phone.replace(/\D/g, "")}`;
+      let phoneNumberRaw = data.phone.replace(/\D/g, "");
+      if (phoneNumberRaw.startsWith('0')) {
+        phoneNumberRaw = phoneNumberRaw.substring(1);
+      }
+      const formattedPhoneNumber = `+234${phoneNumberRaw}`;
       const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
       setConfirmationResult(result);
       setStep("otp");
