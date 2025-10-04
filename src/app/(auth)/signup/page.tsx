@@ -75,24 +75,30 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'send-otp-button', {
-            'size': 'invisible',
-            'callback': (response: any) => {
-                // reCAPTCHA solved.
-                console.log("reCAPTCHA solved");
-            }
-        });
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
+      // It's important that the container is visible, but we can make it invisible with CSS.
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          console.log("reCAPTCHA solved");
+        }
+      });
     }
-  }
+  }, []);
+
 
   const handleSendOtp = async () => {
     setLoading(true);
     setError(null);
+    if (!window.recaptchaVerifier) {
+        setError("reCAPTCHA not initialized. Please refresh the page.");
+        setLoading(false);
+        return;
+    }
+
     try {
-      setupRecaptcha();
-      const appVerifier = window.recaptchaVerifier!;
+      const appVerifier = window.recaptchaVerifier;
       const formattedPhoneNumber = `+234${phoneNumber.replace(/\D/g, '')}`;
       const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
       setConfirmationResult(result);
@@ -208,6 +214,7 @@ export default function SignupPage() {
               <CardDescription>Enter your phone number to get started.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 px-4 sm:px-6">
+              <div id="recaptcha-container"></div>
               {error && (
                 <Alert variant="destructive">
                     <AlertTitle>Signup Failed</AlertTitle>

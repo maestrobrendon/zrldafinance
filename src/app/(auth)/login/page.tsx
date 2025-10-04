@@ -47,6 +47,7 @@ export default function LoginPage() {
         'size': 'invisible',
         'callback': (response: any) => {
           // reCAPTCHA solved.
+          console.log("reCAPTCHA solved");
         }
       });
     }
@@ -62,13 +63,7 @@ export default function LoginPage() {
 
     if (loginMethod === 'phone') {
       try {
-        if (!window.recaptchaVerifier) {
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                'size': 'invisible',
-                'callback': () => { /* reCAPTCHA solved */ }
-            });
-        }
-        const appVerifier = window.recaptchaVerifier;
+        const appVerifier = window.recaptchaVerifier!;
         const formattedPhoneNumber = `+234${identifier.replace(/\D/g, '')}`;
         const result = await signInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
         setConfirmationResult(result);
@@ -162,6 +157,7 @@ export default function LoginPage() {
         <CardDescription>{getCardDescription()}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 px-4 sm:px-6">
+         <div id="recaptcha-container"></div>
         {error && (
             <Alert variant="destructive">
                 <AlertTitle>Login Failed</AlertTitle>
@@ -213,7 +209,6 @@ export default function LoginPage() {
           </Link>
         </div>
       </CardFooter>
-      <div id="recaptcha-container"></div>
     </>
   );
 }
