@@ -20,8 +20,9 @@ import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { OtpLoginForm } from "@/components/auth/otp-login-form";
+import { Checkbox } from "@/components/ui/checkbox";
 
-type Step = 'name' | 'email' | 'phone' | 'password' | 'ztag';
+type Step = 'name' | 'email' | 'username' | 'phone' | 'password' | 'ztag';
 
 async function checkZtagUniqueness(ztag: string): Promise<boolean> {
     if (!ztag) return false;
@@ -39,6 +40,7 @@ export default function SignupPage() {
       firstName: "",
       lastName: "",
       email: "",
+      username: "",
       phone: "",
       password: "",
       confirmPassword: "",
@@ -51,6 +53,9 @@ export default function SignupPage() {
   const [isZtagChecking, setIsZtagChecking] = useState(false);
   const [isZtagAvailable, setIsZtagAvailable] = useState<boolean | null>(null);
   const [ztagSuggestion, setZtagSuggestion] = useState("");
+  const [showOtpForm, setShowOtpForm] = useState(false);
+  const [skipPhone, setSkipPhone] = useState(false);
+
 
   useEffect(() => {
     if (step === 'ztag' && formData.firstName && !ztagSuggestion) {
@@ -90,10 +95,18 @@ export default function SignupPage() {
           setError("Please enter a valid email address.");
           return;
         }
+        setStep('username');
+        break;
+      case 'username':
+        if (!formData.username) {
+            setError("Please enter a username.");
+            return;
+        }
         setStep('phone');
         break;
       case 'phone':
-        // This case is handled by the OtpLoginForm's onSuccess
+        // This case is now handled by skip/OTP success
+        setStep('password');
         break;
       case 'password':
         if (formData.password.length < 6) {
@@ -116,7 +129,7 @@ export default function SignupPage() {
 
   const handleFinalSignup = async () => {
     if (!isZtagAvailable) {
-        setError("The chosen Z-tag is not available. Please pick another one.");
+        setError("The chosen @Ztag is not available. Please pick another one.");
         return;
     }
 
@@ -139,8 +152,9 @@ export default function SignupPage() {
         batch.set(userDocRef, {
             userId: user.uid,
             email: formData.email,
+            username: formData.username,
             name: `${formData.firstName} ${formData.lastName}`,
-            phone: formData.phone,
+            phone: formData.phone || null,
             photoURL: newPhotoURL,
             ztag: formData.ztag.toLowerCase(),
             balance: 50000,
@@ -174,6 +188,7 @@ export default function SignupPage() {
         console.error("Final Signup Error: ", error);
         if (error.code === 'auth/email-already-in-use') {
             setError("This email address is already registered. Please log in or use a different email.");
+            setStep('email');
         } else {
             setError('There was a problem creating your account. Please try again.');
         }
@@ -202,7 +217,7 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!formData.firstName || !formData.lastName}>Next</Button>
             </CardFooter>
           </>
         );
@@ -220,7 +235,25 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!formData.email.includes('@')}>Next</Button>
+            </CardFooter>
+          </>
+        );
+        case 'username':
+        return (
+          <>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Create a username</CardTitle>
+              <CardDescription>This will be your unique identifier on Zrlda.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" placeholder="alexdoe" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button className="w-full" onClick={handleNextStep} disabled={!formData.username}>Next</Button>
             </CardFooter>
           </>
         );
@@ -228,12 +261,32 @@ export default function SignupPage() {
         return (
           <>
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Verify your Phone</CardTitle>
-              <CardDescription>We'll send you a one-time password (OTP).</CardDescription>
+              <CardTitle className="text-2xl">Verify your Phone (Optional)</CardTitle>
+              <CardDescription>This helps secure your account. You can also do this later.</CardDescription>
             </CardHeader>
             <CardContent>
-              <OtpLoginForm onSuccess={(phone) => handleVerificationSuccess(phone)} />
+               {showOtpForm ? (
+                  <OtpLoginForm onSuccess={(phone) => handleVerificationSuccess(phone)} />
+               ) : (
+                 <div className="space-y-4">
+                    <Button className="w-full" onClick={() => setShowOtpForm(true)}>Verify Phone Number</Button>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="skip-phone" checked={skipPhone} onCheckedChange={(checked) => setSkipPhone(checked as boolean)} />
+                        <label
+                            htmlFor="skip-phone"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                           Skip for now
+                        </label>
+                    </div>
+                 </div>
+               )}
             </CardContent>
+             <CardFooter>
+                {skipPhone && !showOtpForm && (
+                    <Button className="w-full" onClick={handleNextStep}>Next</Button>
+                )}
+             </CardFooter>
           </>
         );
       case 'password':
@@ -254,7 +307,7 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!formData.password || formData.password.length < 6 || formData.password !== formData.confirmPassword}>Next</Button>
             </CardFooter>
           </>
         );
@@ -302,10 +355,14 @@ export default function SignupPage() {
       )}
       {renderStepContent()}
       <div className="text-center text-sm pb-6 px-4 sm:px-6">
-        Already have an account?{" "}
+        <Button variant="link" size="sm" onClick={() => setStep(step === 'name' ? 'name' : 'name' )}>
+            {step !== 'name' && `Back to: ${step === 'email' ? 'Name' : step === 'username' ? 'Email' : step === 'phone' ? 'Username' : step === 'password' ? 'Phone' : 'Password'}`}
+        </Button>
+        <p>Already have an account?{" "}
         <Link href="/login" className="font-semibold text-primary">
           Log in
         </Link>
+        </p>
       </div>
     </>
   );
