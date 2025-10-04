@@ -1,61 +1,44 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { auth, app } from "@/lib/firebase";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { FirebaseClientProvider, useUser } from "@/firebase";
 import AppSidebar from "@/components/layout/app-sidebar";
 import BottomNavbar from "@/components/layout/bottom-navbar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Icons } from "@/components/icons";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function AppContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [loading, setLoading] = useState(true);
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
-    // Initialize App Check
-    // IMPORTANT: This is temporarily disabled to resolve a configuration error.
-    // To re-enable, you must ensure your reCAPTCHA Enterprise key is correctly
-    // configured and linked to App Check in your Firebase Console for the web app.
-    /*
-    if (typeof window !== "undefined") {
-      try {
-        initializeAppCheck(app, {
-          provider: new ReCaptchaV3Provider("6Lezi90rAAAAAMuN5llIGC-8Tq7gcONr1RcBx9H_"),
-          isTokenAutoRefreshEnabled: true,
-        });
-        console.log("App Check initialized");
-      } catch (error) {
-        console.error("Failed to initialize App Check", error);
-      }
-    }
-    */
-
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    if (!isUserLoading) {
       if (!user) {
         // Allow access to signup/login while preventing redirect loops
         if (pathname !== "/login" && pathname !== "/signup") {
           router.push("/login");
-        } else {
-            setLoading(false);
         }
-      } else {
-        setLoading(false);
       }
-    });
+    }
+  }, [user, isUserLoading, router, pathname]);
 
-    return () => unsubscribe();
-  }, [router, pathname]);
-
-  if (loading) {
+  if (isUserLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Icons.logo className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
+  }
+  
+  // Render children only if user is loaded and authenticated,
+  // or if they are on a public auth page.
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
+  if (!user && !isAuthPage) {
+      // Don't render children until redirect is complete
+      return null;
   }
 
   return (
@@ -72,3 +55,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <FirebaseClientProvider>
+            <AppContent>{children}</AppContent>
+        </FirebaseClientProvider>
+    )
+}
+
+    

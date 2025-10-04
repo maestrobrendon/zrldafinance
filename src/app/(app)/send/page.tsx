@@ -14,10 +14,9 @@ import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc, writeBatch, collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { User } from "firebase/auth";
 
 const zrldaFriends = [
     { id: 'f1', name: 'Jane Doe', avatarUrl: 'https://picsum.photos/seed/2/100/100', handle: '@jane.doe' },
@@ -46,24 +45,22 @@ export default function SendPage() {
     const [selectedCircle, setSelectedCircle] = useState<(typeof activeCircles)[0] | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [user, setUser] = useState<User | null>(null);
+    const { user } = useUser();
+    const firestore = useFirestore();
     const [mainBalance, setMainBalance] = useState(0);
     const [zcashBalance, setZcashBalance] = useState(0);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-            setUser(firebaseUser);
-            if (firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    setMainBalance(userDoc.data().balance || 0);
-                    setZcashBalance(userDoc.data().zcashBalance || 0);
-                }
+        if (!user || !firestore) return;
+        const userDocRef = doc(firestore, "users", user.uid);
+        const unsubscribe = onSnapshot(userDocRef, (doc) => {
+            if (doc.exists()) {
+                setMainBalance(doc.data().balance || 0);
+                setZcashBalance(doc.data().zcashBalance || 0);
             }
         });
         return () => unsubscribe();
-    }, []);
+    }, [user, firestore]);
 
     const balanceToShow = isZcashFlow ? zcashBalance : mainBalance;
 
@@ -74,7 +71,7 @@ export default function SendPage() {
     }
 
     const handleSend = async () => {
-        if (!user || !amount || !selectedFriend) return;
+        if (!user || !amount || !selectedFriend || !firestore) return;
 
         setIsSubmitting(true);
         const sendAmount = parseFloat(amount);
@@ -91,8 +88,8 @@ export default function SendPage() {
             return;
         }
 
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, "users", user.uid);
+        const batch = writeBatch(firestore);
+        const userDocRef = doc(firestore, "users", user.uid);
 
         if (isZcashFlow) {
             batch.update(userDocRef, { zcashBalance: zcashBalance - sendAmount });
@@ -370,3 +367,5 @@ export default function SendPage() {
         </div>
     );
 }
+
+    

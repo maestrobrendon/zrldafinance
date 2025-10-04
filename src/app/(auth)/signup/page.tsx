@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { auth, db } from "@/lib/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { doc, setDoc, getDocs, collection, query, where, Timestamp, writeBatch } from "firebase/firestore";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { OtpLoginForm } from "@/components/auth/otp-login-form";
@@ -43,15 +43,10 @@ const signupSchema = z.object({
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
-async function checkUniqueness(field: 'username' | 'ztag', value: string): Promise<boolean> {
-    if (!value) return false;
-    const q = query(collection(db, "users"), where(field, "==", value.toLowerCase()));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.empty;
-}
-
 export default function SignupPage() {
   const router = useRouter();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const [step, setStep] = useState<Step>('name');
   
   const form = useForm<SignupFormData>({
@@ -69,7 +64,7 @@ export default function SignupPage() {
     },
   });
 
-  const { trigger, formState: { errors, isValid } } = form;
+  const { trigger, formState: { errors } } = form;
 
   // UI state
   const [serverError, setServerError] = useState<string | null>(null);
@@ -78,6 +73,13 @@ export default function SignupPage() {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [skipPhone, setSkipPhone] = useState(false);
+
+  async function checkUniqueness(field: 'username' | 'ztag', value: string): Promise<boolean> {
+      if (!value || !firestore) return false;
+      const q = query(collection(firestore, "users"), where(field, "==", value.toLowerCase()));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.empty;
+  }
 
   useEffect(() => {
     if (step === 'ztag') {
@@ -110,7 +112,7 @@ export default function SignupPage() {
         }
     });
     return () => subscription.unsubscribe();
-  }, [form, errors]);
+  }, [form, errors, firestore]);
 
 
   const handleNextStep = async () => {
@@ -159,8 +161,8 @@ export default function SignupPage() {
   };
 
   const handleFinalSignup = async (data: SignupFormData) => {
-    if (!isAvailable && step === 'ztag') {
-        setServerError("The chosen @Ztag or username is not available.");
+    if ((step === 'username' || step === 'ztag') && !isAvailable) {
+        setServerError("The chosen username or @Ztag is not available.");
         return;
     }
 
@@ -177,13 +179,13 @@ export default function SignupPage() {
 
         const newPhotoURL = `https://picsum.photos/seed/${user.uid}/100/100`;
         const now = Timestamp.now();
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, "users", user.uid);
+        const batch = writeBatch(firestore);
+        const userDocRef = doc(firestore, "users", user.uid);
 
         batch.set(userDocRef, {
             userId: user.uid,
-            email: data.email,
-            username: data.username,
+            email: data.email.toLowerCase(),
+            username: data.username.toLowerCase(),
             name: `${data.firstName} ${data.lastName}`,
             phone: data.phone || null,
             photoURL: newPhotoURL,
@@ -294,7 +296,7 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.username || isChecking}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.username || isChecking || !isAvailable}>Next</Button>
             </CardFooter>
           </>
         );
@@ -423,3 +425,5 @@ export default function SignupPage() {
     </>
   );
 }
+
+    

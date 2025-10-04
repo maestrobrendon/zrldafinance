@@ -1,8 +1,6 @@
 
-
 import { Timestamp, collection, writeBatch, doc } from 'firebase/firestore';
 import { Icons } from '@/components/icons';
-import { db } from './firebase';
 
 // Main User Profile Schema
 export type UserProfile = {
@@ -155,3 +153,5 @@ export const defaultUser: Omit<UserProfile, 'userId' | 'email' | 'balance' | 'KY
   name: 'Alex Doe',
   avatarUrl: 'https://picsum.photos/seed/1/100/100',
 };
+
+    

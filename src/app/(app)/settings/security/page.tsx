@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/firebase";
 import {
   multiFactor,
   PhoneAuthProvider,
@@ -41,6 +41,7 @@ declare global {
 
 export default function SecuritySettingsPage() {
     const { toast } = useToast();
+    const auth = useAuth();
     const [user, setUser] = React.useState<MultiFactorUser | null>(null);
     const [enrolledFactors, setEnrolledFactors] = React.useState<PhoneMultiFactorInfo[]>([]);
     const [mfaDialogOpen, setMfaDialogOpen] = React.useState(false);
@@ -63,7 +64,7 @@ export default function SecuritySettingsPage() {
             }
         });
         return () => unsubscribe();
-    }, []);
+    }, [auth]);
 
     React.useEffect(() => {
         if (mfaDialogOpen && !window.recaptchaVerifier) {
@@ -75,7 +76,7 @@ export default function SecuritySettingsPage() {
             });
             window.recaptchaVerifier.render();
         }
-    }, [mfaDialogOpen]);
+    }, [mfaDialogOpen, auth]);
 
     const resetMfaDialog = () => {
         setMfaDialogOpen(false);
@@ -296,3 +297,5 @@ export default function SecuritySettingsPage() {
         </div>
     )
 }
+
+    

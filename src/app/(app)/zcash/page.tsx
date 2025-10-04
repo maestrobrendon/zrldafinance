@@ -10,8 +10,7 @@ import { Icons } from "@/components/icons";
 import { type Transaction } from "@/lib/data";
 import Link from "next/link";
 import { format } from "date-fns";
-import { auth, db } from "@/lib/firebase";
-import type { User } from 'firebase/auth';
+import { useUser, useFirestore } from "@/firebase";
 import { collection, query, where, onSnapshot, orderBy, limit, doc } from "firebase/firestore";
 
 
@@ -25,55 +24,48 @@ const favoritePeople = [
 
 export default function ZCashPage() {
   const [showRequest, setShowRequest] = useState(true);
-  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [zcashBalance, setZcashBalance] = useState(0); 
 
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
-        setUser(firebaseUser);
-        if (firebaseUser) {
-            const userDocRef = doc(db, "users", firebaseUser.uid);
-            const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    setZcashBalance(doc.data().zcashBalance || 0);
-                }
-            });
-
-            const q = query(
-                collection(db, "users", firebaseUser.uid, "transactions"), 
-                orderBy("timestamp", "desc"),
-                limit(5)
-            );
-            const unsubscribeTransactions = onSnapshot(q, (querySnapshot) => {
-                const userTransactions: Transaction[] = [];
-                querySnapshot.forEach((doc) => {
-                     const data = doc.data();
-                    userTransactions.push({
-                        id: doc.id,
-                        ...data,
-                        timestamp: data.timestamp?.toDate(),
-                        date: data.timestamp?.toDate().toISOString(),
-                    } as Transaction);
-                });
-                
-                const filtered = userTransactions.filter(tx => tx.type !== 'income');
-                setRecentTransactions(filtered);
-            }, (error) => {
-                console.error("Error fetching transactions for ZCash page:", error);
-            });
-            return () => {
-                unsubscribeUser();
-                unsubscribeTransactions();
-            };
-        } else {
-            setRecentTransactions([]);
-            setZcashBalance(0);
+    if (!user || !firestore) return;
+    
+    const userDocRef = doc(firestore, "users", user.uid);
+    const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+            setZcashBalance(doc.data().zcashBalance || 0);
         }
     });
-    
-    return () => unsubscribeAuth();
-  }, []);
+
+    const q = query(
+        collection(firestore, "users", user.uid, "transactions"), 
+        orderBy("timestamp", "desc"),
+        limit(5)
+    );
+    const unsubscribeTransactions = onSnapshot(q, (querySnapshot) => {
+        const userTransactions: Transaction[] = [];
+        querySnapshot.forEach((doc) => {
+              const data = doc.data();
+            userTransactions.push({
+                id: doc.id,
+                ...data,
+                timestamp: data.timestamp?.toDate(),
+                date: data.timestamp?.toDate().toISOString(),
+            } as Transaction);
+        });
+        
+        const filtered = userTransactions.filter(tx => tx.type !== 'income');
+        setRecentTransactions(filtered);
+    }, (error) => {
+        console.error("Error fetching transactions for ZCash page:", error);
+    });
+    return () => {
+        unsubscribeUser();
+        unsubscribeTransactions();
+    };
+  }, [user, firestore]);
 
   const moneyRequest = {
     name: 'Liz Dizon',

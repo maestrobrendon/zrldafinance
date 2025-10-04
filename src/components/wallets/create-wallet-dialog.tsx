@@ -35,7 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import { auth, db } from "@/lib/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { collection, addDoc, serverTimestamp, Timestamp, writeBatch, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Wallet } from "@/lib/data";
@@ -90,6 +90,8 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<WalletType>("budget");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const auth = useAuth();
+  const firestore = useFirestore();
 
   const budgetForm = useForm<z.infer<typeof budgetWalletSchema>>({
     resolver: zodResolver(budgetWalletSchema),
@@ -132,8 +134,8 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     }
     
     setIsSubmitting(true);
-    const batch = writeBatch(db);
-    const userDocRef = doc(db, "users", user.uid);
+    const batch = writeBatch(firestore);
+    const userDocRef = doc(firestore, "users", user.uid);
     const walletsSubcollectionRef = collection(userDocRef, 'wallets');
 
     try {
@@ -699,3 +701,5 @@ export function CreateWalletDialog({ trigger }: CreateWalletDialogProps) {
     </Dialog>
   );
 }
+
+    

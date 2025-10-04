@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -14,8 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
-import { auth, db } from "@/lib/firebase";
-import type { User } from 'firebase/auth';
+import { useUser, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, onSnapshot, query, where, doc, orderBy, limit, setDoc } from "firebase/firestore";
 import AnalyticsSection from "@/components/dashboard/analytics-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,95 +42,93 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
 
 export default function DashboardPage() {
   const [showBanner, setShowBanner] = useState(true);
-  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
   const [mainBalance, setMainBalance] = useState<number | null>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
+  const userDocRef = useMemoFirebase(() => user ? doc(firestore, "users", user.uid) : null, [user, firestore]);
+  
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
-        setUser(firebaseUser);
-        if (firebaseUser) {
-            const userDocRef = doc(db, "users", firebaseUser.uid);
-
-            const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    if (data.balance === undefined || data.balance === null) {
-                        setDoc(userDocRef, { balance: 50000 }, { merge: true });
-                        setMainBalance(50000);
-                    } else {
-                        setMainBalance(data.balance);
-                    }
-                } else {
-                    setDoc(userDocRef, { balance: 50000 }, { merge: true });
-                    setMainBalance(50000);
-                }
-            });
-
-            // Wallets listener (subcollection)
-            const walletsQuery = query(
-                collection(db, "users", firebaseUser.uid, "wallets")
-            );
-            const unsubscribeWallets = onSnapshot(walletsQuery, (querySnapshot) => {
-                const userWallets: Wallet[] = [];
-                querySnapshot.forEach((doc) => {
-                     const data = doc.data();
-                    userWallets.push({
-                        id: doc.id,
-                        ...data,
-                        createdAt: data.createdAt?.toDate(),
-                        updatedAt: data.updatedAt?.toDate(),
-                        deadline: data.deadline?.toDate(),
-                    } as Wallet);
-                });
-                setWallets(userWallets.slice(0, 6));
-            }, (error) => {
-                console.error("Error fetching wallets:", error);
-                 if (error.code === 'permission-denied') {
-                    console.error("Firestore security rules are blocking the query.");
-                }
-            });
-
-            // Transactions listener (subcollection)
-            const transactionsQuery = query(
-                collection(db, "users", firebaseUser.uid, "transactions"), 
-                orderBy("timestamp", "desc"), 
-                limit(4)
-            );
-            const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-                const transactions: Transaction[] = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    transactions.push({
-                        id: doc.id,
-                        ...data,
-                        timestamp: data.timestamp.toDate(),
-                        date: data.timestamp.toDate().toISOString(),
-                    } as Transaction);
-                });
-                setRecentTransactions(transactions);
-            }, (error) => {
-                console.error("Error fetching transactions:", error);
-                 if (error.code === 'permission-denied') {
-                    console.error("Firestore security rules are blocking the transactions query.");
-                }
-            });
-
-            return () => {
-                unsubscribeUser();
-                unsubscribeWallets();
-                unsubscribeTransactions();
-            };
+    if (!userDocRef) return;
+    const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            if (data.balance === undefined || data.balance === null) {
+                setDoc(userDocRef, { balance: 50000 }, { merge: true });
+                setMainBalance(50000);
+            } else {
+                setMainBalance(data.balance);
+            }
         } else {
-            setWallets([]);
-            setMainBalance(0);
-            setRecentTransactions([]);
+            setDoc(userDocRef, { balance: 50000 }, { merge: true });
+            setMainBalance(50000);
         }
     });
-    
-    return () => unsubscribeAuth();
-  }, []);
+
+    return () => unsubscribeUser();
+  }, [userDocRef]);
+
+
+  useEffect(() => {
+    if (!user || !firestore) return;
+
+    // Wallets listener (subcollection)
+    const walletsQuery = query(
+        collection(firestore, "users", user.uid, "wallets")
+    );
+    const unsubscribeWallets = onSnapshot(walletsQuery, (querySnapshot) => {
+        const userWallets: Wallet[] = [];
+        querySnapshot.forEach((doc) => {
+              const data = doc.data();
+            userWallets.push({
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate(),
+                updatedAt: data.updatedAt?.toDate(),
+                deadline: data.deadline?.toDate(),
+            } as Wallet);
+        });
+        setWallets(userWallets.slice(0, 6));
+    }, (error) => {
+        console.error("Error fetching wallets:", error);
+          if (error.code === 'permission-denied') {
+            console.error("Firestore security rules are blocking the query.");
+        }
+    });
+
+    // Transactions listener (subcollection)
+    const transactionsQuery = query(
+        collection(firestore, "users", user.uid, "transactions"), 
+        orderBy("timestamp", "desc"), 
+        limit(4)
+    );
+    const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+        const transactions: Transaction[] = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            transactions.push({
+                id: doc.id,
+                ...data,
+                timestamp: data.timestamp.toDate(),
+                date: data.timestamp.toDate().toISOString(),
+            } as Transaction);
+        });
+        setRecentTransactions(transactions);
+    }, (error) => {
+        console.error("Error fetching transactions:", error);
+          if (error.code === 'permission-denied') {
+            console.error("Firestore security rules are blocking the transactions query.");
+        }
+    });
+
+    return () => {
+        unsubscribeWallets();
+        unsubscribeTransactions();
+    };
+  }, [user, firestore]);
 
   const displayName = user?.displayName || "User";
   const photoURL = user?.photoURL;
@@ -332,7 +329,5 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
 
     

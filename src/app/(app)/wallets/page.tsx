@@ -6,7 +6,7 @@ import { type Wallet, type Budget, type Goal } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { CreateWalletDialog } from "@/components/wallets/create-wallet-dialog";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import { collection, query, where, onSnapshot, orderBy, doc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,57 +21,50 @@ export default function WalletsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [mainBalance, setMainBalance] = React.useState<number | null>(null);
+  const { user } = useUser();
+  const firestore = useFirestore();
   
   React.useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      if (user) {
-        // Main balance listener
-        const userDocRef = doc(db, "users", user.uid);
-        const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-            if (doc.exists()) {
-                setMainBalance(doc.data().balance ?? 0);
-            } else {
-                setMainBalance(0);
-            }
+    if (!user || !firestore) return;
+    // Main balance listener
+    const userDocRef = doc(firestore, "users", user.uid);
+    const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+            setMainBalance(doc.data().balance ?? 0);
+        } else {
+            setMainBalance(0);
+        }
+    });
+    
+    const q = query(
+        collection(firestore, "users", user.uid, "wallets"),
+        orderBy("createdAt", "desc")
+    );
+    const unsubscribeWallets = onSnapshot(q, (querySnapshot) => {
+        const userWallets: Wallet[] = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            userWallets.push({
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate(),
+                updatedAt: data.updatedAt?.toDate(),
+                deadline: data.deadline?.toDate(),
+            } as Wallet);
         });
-        
-        const q = query(
-            collection(db, "users", user.uid, "wallets"),
-            orderBy("createdAt", "desc")
-        );
-        const unsubscribeWallets = onSnapshot(q, (querySnapshot) => {
-            const userWallets: Wallet[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                userWallets.push({
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate(),
-                    updatedAt: data.updatedAt?.toDate(),
-                    deadline: data.deadline?.toDate(),
-                } as Wallet);
-            });
-            setWallets(userWallets);
-            setLoading(false);
-        }, (err) => {
-            console.error("Error fetching wallets:", err);
-            setError("Failed to load wallets. Please try again.");
-            setLoading(false);
-        });
-
-        return () => {
-            unsubscribeUser();
-            unsubscribeWallets();
-        };
-      } else {
-        setWallets([]);
-        setMainBalance(0);
+        setWallets(userWallets);
         setLoading(false);
-      }
+    }, (err) => {
+        console.error("Error fetching wallets:", err);
+        setError("Failed to load wallets. Please try again.");
+        setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+        unsubscribeUser();
+        unsubscribeWallets();
+    };
+  }, [user, firestore]);
 
   const budgets = wallets.filter(w => w.type === 'budget') as Budget[];
   const goals = wallets.filter(w => w.type === 'goal') as Goal[];
@@ -178,3 +171,5 @@ export default function WalletsPage() {
     </div>
   );
 }
+
+    

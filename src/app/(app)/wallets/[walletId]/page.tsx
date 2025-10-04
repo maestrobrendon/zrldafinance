@@ -19,8 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AddFundsDialog } from "@/components/wallets/add-funds-dialog";
 import { WithdrawFundsDialog } from "@/components/wallets/withdraw-funds-dialog";
 import { doc, onSnapshot, collection, query, where, orderBy } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
-import type { User } from "firebase/auth";
+import { useUser, useFirestore } from "@/firebase";
 
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
@@ -53,70 +52,66 @@ export default function WalletDetailPage() {
   const params = useParams();
   const walletId = params.walletId as string;
   const [wallet, setWallet] = React.useState<Wallet | null>(null);
-  const [user, setUser] = React.useState<User | null>(null);
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [mainBalance, setMainBalance] = React.useState(0);
   const [itemTransactions, setItemTransactions] = React.useState<Transaction[]>([]);
   
   React.useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((firebaseUser) => {
-        setUser(firebaseUser);
-        if (firebaseUser) {
-            const userDocRef = doc(db, "users", firebaseUser.uid);
-            onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    setMainBalance(doc.data().balance || 0);
-                }
-            });
+    if (!user || !firestore) return;
 
-            if (walletId) {
-                const walletDocRef = doc(db, "users", firebaseUser.uid, "wallets", walletId);
-                const unsubscribeWallet = onSnapshot(walletDocRef, (doc) => {
-                    if (doc.exists()) {
-                    const data = doc.data();
-                    setWallet({
-                        id: doc.id,
-                        ...data,
-                        createdAt: data.createdAt?.toDate(),
-                        updatedAt: data.updatedAt?.toDate(),
-                        deadline: data.deadline?.toDate(),
-                    } as Wallet);
-                    } else {
-                    setWallet(null);
-                    }
-                });
-
-                const transactionsQuery = query(
-                    collection(db, "users", firebaseUser.uid, "transactions"),
-                    where("walletId", "==", walletId),
-                    orderBy("timestamp", "desc")
-                );
-
-                const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-                    const transactions: Transaction[] = [];
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        transactions.push({
-                            id: doc.id,
-                            ...data,
-                            timestamp: data.timestamp.toDate(),
-                            date: data.timestamp.toDate().toISOString(),
-                        } as Transaction);
-                    });
-                    setItemTransactions(transactions);
-                }, (error) => {
-                    console.warn("Query requires an index. If you see a permission error, create a composite index for 'walletId' and 'timestamp' in your Firebase console.", error.message);
-                });
-
-                return () => {
-                    unsubscribeWallet();
-                    unsubscribeTransactions();
-                };
-            }
+    const userDocRef = doc(firestore, "users", user.uid);
+    onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+            setMainBalance(doc.data().balance || 0);
         }
     });
 
-    return () => unsubscribeAuth();
-  }, [walletId]);
+    if (walletId) {
+        const walletDocRef = doc(firestore, "users", user.uid, "wallets", walletId);
+        const unsubscribeWallet = onSnapshot(walletDocRef, (doc) => {
+            if (doc.exists()) {
+            const data = doc.data();
+            setWallet({
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate(),
+                updatedAt: data.updatedAt?.toDate(),
+                deadline: data.deadline?.toDate(),
+            } as Wallet);
+            } else {
+            setWallet(null);
+            }
+        });
+
+        const transactionsQuery = query(
+            collection(firestore, "users", user.uid, "transactions"),
+            where("walletId", "==", walletId),
+            orderBy("timestamp", "desc")
+        );
+
+        const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+            const transactions: Transaction[] = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                transactions.push({
+                    id: doc.id,
+                    ...data,
+                    timestamp: data.timestamp.toDate(),
+                    date: data.timestamp.toDate().toISOString(),
+                } as Transaction);
+            });
+            setItemTransactions(transactions);
+        }, (error) => {
+            console.warn("Query requires an index. If you see a permission error, create a composite index for 'walletId' and 'timestamp' in your Firebase console.", error.message);
+        });
+
+        return () => {
+            unsubscribeWallet();
+            unsubscribeTransactions();
+        };
+    }
+  }, [user, firestore, walletId]);
 
   if (!wallet) {
     return (
@@ -318,3 +313,5 @@ export default function WalletDetailPage() {
     </div>
   );
 }
+
+    

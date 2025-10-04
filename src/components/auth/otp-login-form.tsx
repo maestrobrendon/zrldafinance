@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/input-otp";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Icons } from "@/components/icons";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 
 const phoneSchema = z.object({
@@ -35,7 +35,7 @@ const otpSchema = z.object({
 });
 
 type OtpLoginFormProps = {
-  onSuccess: () => void;
+  onSuccess: (phone?: string) => void;
 };
 
 declare global {
@@ -51,6 +51,7 @@ export function OtpLoginForm({ onSuccess }: OtpLoginFormProps) {
   const [loading, setLoading] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const auth = useAuth();
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -74,7 +75,7 @@ export function OtpLoginForm({ onSuccess }: OtpLoginFormProps) {
         console.error("reCAPTCHA render error:", err);
       });
     }
-  }, []);
+  }, [auth]);
   
    useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -120,8 +121,8 @@ export function OtpLoginForm({ onSuccess }: OtpLoginFormProps) {
     setLoading(true);
     setError(null);
     try {
-      await confirmationResult.confirm(data.otp);
-      onSuccess();
+      const result = await confirmationResult.confirm(data.otp);
+      onSuccess(result.user.phoneNumber || undefined);
     } catch (error: any) {
       console.error("OTP Verify Error: ", error);
       setError("Invalid OTP. Please try again.");
@@ -225,3 +226,5 @@ export function OtpLoginForm({ onSuccess }: OtpLoginFormProps) {
     </div>
   );
 }
+
+    

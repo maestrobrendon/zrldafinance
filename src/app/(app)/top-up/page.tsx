@@ -10,9 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import { doc, onSnapshot, writeBatch, collection } from "firebase/firestore";
-import type { User } from "firebase/auth";
 
 const linkedBanks = [
     { id: 'b1', name: 'Guaranty Trust Bank', last4: '... 2345' },
@@ -25,30 +24,24 @@ export default function TopUpPage() {
     const [step, setStep] = useState('select'); // select, form, success
     const [amount, setAmount] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
+    const { user } = useUser();
+    const firestore = useFirestore();
     const [mainBalance, setMainBalance] = useState<number | null>(null);
     const [transactionId, setTransactionId] = useState('');
 
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(firebaseUser => {
-            setUser(firebaseUser);
-            if(firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-                    if (doc.exists()) {
-                        setMainBalance(doc.data().balance || 0);
-                    } else {
-                        setMainBalance(0);
-                    }
-                });
-                return () => unsubscribeUser();
+        if (!user || !firestore) return;
+        const userDocRef = doc(firestore, "users", user.uid);
+        const unsubscribe = onSnapshot(userDocRef, (doc) => {
+            if (doc.exists()) {
+                setMainBalance(doc.data().balance || 0);
             } else {
-                setMainBalance(null);
+                setMainBalance(0);
             }
         });
         return () => unsubscribe();
-    }, []);
+    }, [user, firestore]);
 
     const handleCopy = () => {
         const accountNumber = "0123456789";
@@ -74,7 +67,7 @@ export default function TopUpPage() {
     };
     
     const handleTopUpWithCard = async () => {
-        if (!user || !amount) return;
+        if (!user || !amount || !firestore) return;
 
         setIsSubmitting(true);
         const topUpAmount = parseFloat(amount);
@@ -85,8 +78,8 @@ export default function TopUpPage() {
             return;
         }
 
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, "users", user.uid);
+        const batch = writeBatch(firestore);
+        const userDocRef = doc(firestore, "users", user.uid);
         const newBalance = (mainBalance || 0) + topUpAmount;
 
         batch.update(userDocRef, { balance: newBalance });

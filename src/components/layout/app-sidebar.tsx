@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   Sidebar,
   SidebarHeader,
@@ -16,8 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { AppLogo } from "@/components/app-logo";
-import { auth } from "@/lib/firebase";
-import type { User } from 'firebase/auth';
+import { useUser } from "@/firebase";
 
 const navItems = [
   { href: "/dashboard", icon: Icons.home, label: "Dashboard" },
@@ -29,14 +27,7 @@ const navItems = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(auth.currentUser);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-        setUser(firebaseUser);
-    });
-    return () => unsubscribe();
-  }, []);
+  const { user } = useUser();
 
   const displayName = user?.displayName || "User";
   const displayEmail = user?.email || "";
@@ -85,3 +76,5 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
+
+    

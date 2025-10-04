@@ -11,9 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import type { User } from "firebase/auth";
+import { useUser, useFirestore } from "@/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 
 const zrldaFriends = [
     { id: 'f1', name: 'Jane Doe', avatarUrl: 'https://picsum.photos/seed/2/100/100', handle: '@jane.doe' },
@@ -28,24 +27,21 @@ export default function RequestPage() {
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
     const [zcashBalance, setZcashBalance] = useState(0);
-    const [user, setUser] = useState<User | null>(null);
+    const { user } = useUser();
+    const firestore = useFirestore();
 
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-            setUser(firebaseUser);
-            if (firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const unsubscribeUser = onSnapshot(userDocRef, (userDoc) => {
-                    if (userDoc.exists()) {
-                        setZcashBalance(userDoc.data().zcashBalance || 0);
-                    }
-                });
-                return () => unsubscribeUser();
+        if (!user || !firestore) return;
+
+        const userDocRef = doc(firestore, "users", user.uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (userDoc) => {
+            if (userDoc.exists()) {
+                setZcashBalance(userDoc.data().zcashBalance || 0);
             }
         });
-        return () => unsubscribe();
-    }, []);
+        return () => unsubscribeUser();
+    }, [user, firestore]);
 
 
     const handleSelectFriend = (friend: (typeof zrldaFriends)[0]) => {
@@ -211,7 +207,5 @@ export default function RequestPage() {
         </div>
     );
 }
-
-    
 
     

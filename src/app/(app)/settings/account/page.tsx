@@ -9,13 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore, useAuth } from "@/firebase";
 import { updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function AccountSettingsPage() {
     const { toast } = useToast();
+    const { user, isUserLoading } = useUser();
+    const firestore = useFirestore();
+    const auth = useAuth();
+
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [ztag, setZtag] = useState("");
@@ -28,15 +32,13 @@ export default function AccountSettingsPage() {
     const [canEditZtag, setCanEditZtag] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                setName(user.displayName || "");
-                setEmail(user.email || "");
-                setAvatarUrl(user.photoURL || undefined);
+        if (user && firestore) {
+            setName(user.displayName || "");
+            setEmail(user.email || "");
+            setAvatarUrl(user.photoURL || undefined);
 
-                // Fetch additional user data from Firestore
-                const userDocRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userDocRef);
+            const userDocRef = doc(firestore, "users", user.uid);
+            getDoc(userDocRef).then(userDoc => {
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     setZtag(userData.ztag || "");
@@ -52,14 +54,12 @@ export default function AccountSettingsPage() {
                         }
                     }
                 }
-            }
-        });
-        return () => unsubscribe();
-    }, []);
+            });
+        }
+    }, [user, firestore]);
 
     const handleSaveChanges = async () => {
-        const user = auth.currentUser;
-        if (!user) return;
+        if (!auth.currentUser || !firestore) return;
 
         setIsSaving(true);
         
@@ -75,10 +75,10 @@ export default function AccountSettingsPage() {
 
         try {
             // Update Firebase Auth profile
-            await updateProfile(user, updatedProfile);
+            await updateProfile(auth.currentUser, updatedProfile);
 
             // Update Firestore document
-            const userDocRef = doc(db, "users", user.uid);
+            const userDocRef = doc(firestore, "users", auth.currentUser.uid);
             await setDoc(userDocRef, {
                 name: name,
                 photoURL: newPhotoURL,
@@ -123,6 +123,10 @@ export default function AccountSettingsPage() {
             reader.readAsDataURL(file);
         }
     };
+
+    if (isUserLoading) {
+        return <div>Loading...</div>
+    }
 
     return (
         <div className="space-y-8">
@@ -225,3 +229,5 @@ export default function AccountSettingsPage() {
         </div>
     )
 }
+
+    

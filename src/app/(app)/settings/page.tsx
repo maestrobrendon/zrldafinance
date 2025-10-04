@@ -2,15 +2,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icons } from "@/components/icons";
-import { auth } from "@/lib/firebase";
+import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import type { User } from 'firebase/auth';
 
 
 const settingsItems = [
@@ -25,14 +23,8 @@ const settingsItems = [
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(auth.currentUser);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-        setUser(firebaseUser);
-    });
-    return () => unsubscribe();
-  }, []);
+  const auth = useAuth();
+  const { user } = useUser();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -111,3 +103,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

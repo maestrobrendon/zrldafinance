@@ -15,13 +15,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OtpLoginForm } from "@/components/auth/otp-login-form";
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -118,3 +119,5 @@ export default function LoginPage() {
     </>
   );
 }
+
+    

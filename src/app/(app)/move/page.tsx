@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
 import Link from "next/link";
-import { auth, db } from "@/lib/firebase";
-import type { User } from 'firebase/auth';
-import { collection, onSnapshot, query, where, doc, writeBatch } from "firebase/firestore";
+import { useUser, useFirestore } from "@/firebase";
+import { collection, onSnapshot, query, where, doc, writeBatch, getDoc } from "firebase/firestore";
 import { type Wallet } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,49 +23,47 @@ export default function MovePage() {
     const [amount, setAmount] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [user, setUser] = useState<User | null>(null);
+    const { user } = useUser();
+    const firestore = useFirestore();
     const [mainBalance, setMainBalance] = useState(0);
     const [allWallets, setAllWallets] = useState<Wallet[]>([]);
 
     useEffect(() => {
-        const unsubscribeAuth = auth.onAuthStateChanged(firebaseUser => {
-            setUser(firebaseUser);
-            if (firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-                    setMainBalance(doc.data()?.balance || 0);
-                });
+        if (!user || !firestore) return;
 
-                const walletsQuery = query(collection(userDocRef, "wallets"));
-                const unsubscribeWallets = onSnapshot(walletsQuery, (snapshot) => {
-                    const wallets: Wallet[] = [];
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        wallets.push({
-                            id: doc.id,
-                            ...data,
-                            createdAt: data.createdAt?.toDate(),
-                            updatedAt: data.updatedAt?.toDate(),
-                            deadline: data.deadline?.toDate(),
-                        } as Wallet);
-                    });
-                    setAllWallets(wallets);
-                });
-                return () => {
-                    unsubscribeUser();
-                    unsubscribeWallets();
-                }
-            }
+        const userDocRef = doc(firestore, "users", user.uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
+            setMainBalance(doc.data()?.balance || 0);
         });
-        return () => unsubscribeAuth();
-    }, []);
+
+        const walletsQuery = query(collection(userDocRef, "wallets"));
+        const unsubscribeWallets = onSnapshot(walletsQuery, (snapshot) => {
+            const wallets: Wallet[] = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                wallets.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate(),
+                    updatedAt: data.updatedAt?.toDate(),
+                    deadline: data.deadline?.toDate(),
+                } as Wallet);
+            });
+            setAllWallets(wallets);
+        });
+
+        return () => {
+            unsubscribeUser();
+            unsubscribeWallets();
+        }
+    }, [user, firestore]);
 
     const fromWallets = allWallets.filter(w => w.status !== 'locked');
     const fromWallet = fromWalletId === 'main' ? { id: 'main', name: 'Main Wallet', balance: mainBalance } : fromWallets.find(w => w.id === fromWalletId);
     const toWallet = toWalletId === 'main' ? { id: 'main', name: 'Main Wallet', balance: mainBalance } : allWallets.find(w => w.id === toWalletId);
 
     const handleMove = async () => {
-        if (!user || !fromWallet || !toWallet || !amount) return;
+        if (!user || !fromWallet || !toWallet || !amount || !firestore) return;
         
         setIsSubmitting(true);
         const moveAmount = parseFloat(amount);
@@ -76,8 +73,8 @@ export default function MovePage() {
             return;
         }
 
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, "users", user.uid);
+        const batch = writeBatch(firestore);
+        const userDocRef = doc(firestore, "users", user.uid);
         
         const fromBalance = fromWallet.id === 'main' ? mainBalance : fromWallet.balance;
          if (fromBalance < moveAmount) {
@@ -256,3 +253,5 @@ export default function MovePage() {
         </div>
     );
 }
+
+    

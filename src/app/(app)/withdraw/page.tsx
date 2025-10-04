@@ -9,9 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
 import Link from "next/link";
-import { auth, db } from "@/lib/firebase";
+import { useUser, useFirestore } from "@/firebase";
 import { doc, onSnapshot, writeBatch, collection } from "firebase/firestore";
-import type { User } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
 const linkedBanks = [
@@ -23,32 +22,26 @@ export default function WithdrawPage() {
     const [step, setStep] = useState('form'); // form, review, success
     const [amount, setAmount] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
+    const { user } = useUser();
+    const firestore = useFirestore();
     const [mainBalance, setMainBalance] = useState<number | null>(null);
     const [transactionId, setTransactionId] = useState('');
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(firebaseUser => {
-            setUser(firebaseUser);
-            if(firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-                    if (doc.exists()) {
-                        setMainBalance(doc.data().balance || 0);
-                    } else {
-                        setMainBalance(0);
-                    }
-                });
-                return () => unsubscribeUser();
+        if(!user || !firestore) return;
+        const userDocRef = doc(firestore, "users", user.uid);
+        const unsubscribe = onSnapshot(userDocRef, (doc) => {
+            if (doc.exists()) {
+                setMainBalance(doc.data().balance || 0);
             } else {
-                setMainBalance(null);
+                setMainBalance(0);
             }
         });
         return () => unsubscribe();
-    }, []);
+    }, [user, firestore]);
 
     const handleWithdrawal = async () => {
-        if (!user || !amount) return;
+        if (!user || !amount || !firestore) return;
 
         setIsSubmitting(true);
         const withdrawAmount = parseFloat(amount);
@@ -65,8 +58,8 @@ export default function WithdrawPage() {
             return;
         }
 
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, "users", user.uid);
+        const batch = writeBatch(firestore);
+        const userDocRef = doc(firestore, "users", user.uid);
         const newBalance = mainBalance - withdrawAmount;
 
         batch.update(userDocRef, { balance: newBalance });
@@ -237,3 +230,5 @@ export default function WithdrawPage() {
         </div>
     );
 }
+
+    

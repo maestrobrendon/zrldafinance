@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "../icons";
 import { type Wallet } from "@/lib/data";
 import { doc, writeBatch, collection } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 
 type AddFundsDialogProps = {
@@ -32,6 +32,8 @@ export function AddFundsDialog({ trigger, mainBalance, wallet }: AddFundsDialogP
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState("form"); // form, success
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const auth = useAuth();
+  const firestore = useFirestore();
 
   const handleAddFunds = async () => {
     const user = auth.currentUser;
@@ -48,8 +50,8 @@ export function AddFundsDialog({ trigger, mainBalance, wallet }: AddFundsDialogP
     }
 
     setIsSubmitting(true);
-    const batch = writeBatch(db);
-    const userDocRef = doc(db, "users", user.uid);
+    const batch = writeBatch(firestore);
+    const userDocRef = doc(firestore, "users", user.uid);
 
     // Debit from main balance
     batch.update(userDocRef, { balance: mainBalance - addAmount });
@@ -92,7 +94,7 @@ export function AddFundsDialog({ trigger, mainBalance, wallet }: AddFundsDialogP
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild onClick={() => setOpen(true)}>{trigger}</DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         {step === "form" && (
             <>
@@ -143,3 +145,5 @@ export function AddFundsDialog({ trigger, mainBalance, wallet }: AddFundsDialogP
     </Dialog>
   );
 }
+
+    

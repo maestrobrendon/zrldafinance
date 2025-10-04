@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "../icons";
 import { type Wallet } from "@/lib/data";
 import { doc, writeBatch, getDoc, collection } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 
 type WithdrawFundsDialogProps = {
@@ -31,6 +31,8 @@ export function WithdrawFundsDialog({ trigger, wallet }: WithdrawFundsDialogProp
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState("form");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const auth = useAuth();
+  const firestore = useFirestore();
 
   const handleWithdraw = async () => {
     const user = auth.currentUser;
@@ -47,8 +49,8 @@ export function WithdrawFundsDialog({ trigger, wallet }: WithdrawFundsDialogProp
     }
 
     setIsSubmitting(true);
-    const batch = writeBatch(db);
-    const userDocRef = doc(db, "users", user.uid);
+    const batch = writeBatch(firestore);
+    const userDocRef = doc(firestore, "users", user.uid);
 
     // Debit from wallet
     const walletDocRef = doc(userDocRef, 'wallets', wallet.id);
@@ -93,7 +95,7 @@ export function WithdrawFundsDialog({ trigger, wallet }: WithdrawFundsDialogProp
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild onClick={() => setOpen(true)}>{trigger}</DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         {step === "form" && (
             <>
@@ -144,3 +146,5 @@ export function WithdrawFundsDialog({ trigger, wallet }: WithdrawFundsDialogProp
     </Dialog>
   );
 }
+
+    
