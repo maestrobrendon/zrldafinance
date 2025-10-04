@@ -113,7 +113,7 @@ export default function SecuritySettingsPage() {
             console.error("MFA SMS Error:", err);
             setError(err.message || "Failed to send verification code. Please check the number and try again.");
             // @ts-ignore
-            if (typeof grecaptcha !== 'undefined') {
+            if (typeof grecaptcha !== 'undefined' && window.recaptchaVerifier) {
                 // @ts-ignore
                 window.recaptchaVerifier.render().then((widgetId) => grecaptcha.reset(widgetId));
             }
@@ -155,7 +155,7 @@ export default function SecuritySettingsPage() {
 
     return (
         <div className="space-y-8">
-            <div id="recaptcha-container"></div>
+            <div id="recaptcha-container" className="fixed bottom-0 right-0"></div>
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" asChild>
                     <Link href="/settings"><Icons.arrowLeft className="h-5 w-5" /></Link>

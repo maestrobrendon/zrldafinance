@@ -70,6 +70,9 @@ export function OtpLoginForm({ onSuccess }: OtpLoginFormProps) {
           // console.log("reCAPTCHA solved");
         }
       });
+      window.recaptchaVerifier.render().catch(err => {
+        console.error("reCAPTCHA render error:", err);
+      });
     }
   }, []);
   
@@ -99,14 +102,10 @@ export function OtpLoginForm({ onSuccess }: OtpLoginFormProps) {
     } catch (error: any) {
       console.error("OTP Send Error: ", error);
       setError("Failed to send OTP. Please check the number and try again.");
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.render().then(function(widgetId) {
-            // @ts-ignore
-            if (typeof grecaptcha !== 'undefined') {
-                // @ts-ignore
-                grecaptcha.reset(widgetId);
-            }
-        });
+      // @ts-ignore
+      if (window.recaptchaVerifier && typeof grecaptcha !== 'undefined') {
+        // @ts-ignore
+        window.recaptchaVerifier.render().then((widgetId) => grecaptcha.reset(widgetId));
       }
     } finally {
       setLoading(false);
@@ -157,7 +156,7 @@ export function OtpLoginForm({ onSuccess }: OtpLoginFormProps) {
                    <div className="flex items-center gap-2">
                     <Button type="button" variant="outline" className="shrink-0">🇳🇬 +234</Button>
                     <FormControl>
-                        <Input placeholder="801 234 5678" {...field} />
+                        <Input placeholder="8012345678" {...field} />
                     </FormControl>
                    </div>
                   <FormMessage />
