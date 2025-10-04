@@ -17,6 +17,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Initialize App Check
+    // IMPORTANT: This is temporarily disabled to resolve a configuration error.
+    // To re-enable, you must ensure your reCAPTCHA Enterprise key is correctly
+    // configured and linked to App Check in your Firebase Console for the web app.
+    /*
     if (typeof window !== "undefined") {
       try {
         initializeAppCheck(app, {
@@ -28,6 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         console.error("Failed to initialize App Check", error);
       }
     }
+    */
 
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
