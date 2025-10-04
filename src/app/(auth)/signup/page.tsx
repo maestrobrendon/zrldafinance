@@ -28,8 +28,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 type Step = 'name' | 'email' | 'username' | 'phone' | 'password' | 'ztag';
 
 const signupSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters.").regex(/^[a-zA-Z]+$/, "First name can only contain letters."),
-  lastName: z.string().min(2, "Last name must be at least 2 characters.").regex(/^[a-zA-Z]+$/, "Last name can only contain letters."),
+  firstName: z.string().min(2, "First name must be at least 2 characters.").regex(/^[a-zA-Z\-]+$/, "Name can only contain letters and hyphens."),
+  lastName: z.string().min(2, "Last name must be at least 2 characters.").regex(/^[a-zA-Z\-]+$/, "Name can only contain letters and hyphens."),
   email: z.string().email("Please enter a valid email address."),
   username: z.string().min(3, "Username must be 3-20 characters.").max(20, "Username must be 3-20 characters.").regex(/^[a-z0-9_]+$/, "Can only contain lowercase letters, numbers, and underscores."),
   phone: z.string().optional(),
@@ -132,8 +132,10 @@ export default function SignupPage() {
         nextStep = 'phone';
         break;
       case 'phone':
-        // Skip validation, it's optional
-        nextStep = 'password';
+        if (skipPhone) {
+          nextStep = 'password';
+        }
+        // If not skipping, the OTP form handles its own progression.
         break;
       case 'password':
         fieldsToValidate = ['password', 'confirmPassword'];
@@ -143,7 +145,11 @@ export default function SignupPage() {
     
     const isStepValid = await trigger(fieldsToValidate);
     if (isStepValid && nextStep) {
-        setStep(nextStep);
+        if (step === 'phone' && skipPhone) {
+             setStep(nextStep);
+        } else if (step !== 'phone') {
+            setStep(nextStep);
+        }
     }
   };
 
