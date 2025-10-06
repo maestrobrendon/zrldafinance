@@ -21,7 +21,8 @@ const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } 
   Wallet: Icons.wallet,
 };
 
-const groupTransactionsByDate = (transactions: Transaction[]) => {
+const groupTransactionsByDate = (transactions: Transaction[] | null) => {
+  if (!transactions) return {};
   return transactions.reduce((acc, transaction) => {
     const date = format(new Date(transaction.date), 'MMMM d, yyyy');
     if (!acc[date]) {
@@ -33,7 +34,7 @@ const groupTransactionsByDate = (transactions: Transaction[]) => {
 };
 
 export default function TransactionsPage() {
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [transactions, setTransactions] = useState<Transaction[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { user } = useUser();
@@ -95,7 +96,7 @@ export default function TransactionsPage() {
                 </Card>
             )}
 
-            {!loading && !error && Object.keys(groupedTransactions).length === 0 && (
+            {!loading && !error && (!transactions || transactions.length === 0) && (
                 <Card>
                     <CardContent className="pt-6 text-center">
                         <p className="text-muted-foreground">You don't have any transactions yet.</p>
@@ -103,7 +104,7 @@ export default function TransactionsPage() {
                 </Card>
             )}
 
-            {!loading && !error && Object.keys(groupedTransactions).length > 0 && (
+            {!loading && !error && transactions && transactions.length > 0 && (
                 <div className="space-y-6">
                     {Object.entries(groupedTransactions).map(([date, transactionsOnDate]) => (
                         <div key={date}>
@@ -147,5 +148,3 @@ export default function TransactionsPage() {
         </div>
     );
 }
-
-    
