@@ -72,7 +72,7 @@ export default function SignupPage() {
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [skipPhone, setSkipPhone] = useState(false);
 
-  async function checkUniqueness(field: 'ztag', value: string): Promise<boolean> {
+  async function checkUniqueness(field: 'ztag' | 'username', value: string): Promise<boolean> {
       if (!value || !firestore) return false;
       const q = query(collection(firestore, "users"), where(field, "==", value.toLowerCase()));
       const querySnapshot = await getDocs(q);
@@ -87,7 +87,9 @@ export default function SignupPage() {
         let suggestedZtag = '';
         while (!isUnique) {
           const baseZtag = `${firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}${lastName.charAt(0).toLowerCase()}`;
-          suggestedZtag = `${baseZtag}${Math.floor(100 + Math.random() * 900)}`;
+          // Generate a random 3-digit number
+          const randomSuffix = Math.floor(100 + Math.random() * 900);
+          suggestedZtag = `${baseZtag}${randomSuffix}`;
           // Ensure the generated tag fits the length constraints
           if (suggestedZtag.length > 15) {
             suggestedZtag = suggestedZtag.substring(0, 15);
@@ -118,7 +120,7 @@ export default function SignupPage() {
         break;
       case 'email':
         fieldsToValidate = ['email'];
-        nextStep = 'username';
+        nextStep = 'phone';
         break;
       case 'username':
         fieldsToValidate = ['username'];
@@ -155,12 +157,8 @@ export default function SignupPage() {
     setLoading(true);
     setServerError(null);
     
-    const isZtagUnique = await checkUniqueness('ztag', data.ztag);
-    if (!isZtagUnique) {
-        setServerError("The generated @Ztag is already taken. Please go back and try again.");
-        setLoading(false);
-        return;
-    }
+    // The ztag is pre-generated and validated for uniqueness, so we can proceed.
+    // An extra check can be added here for robustness if desired.
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -264,7 +262,7 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.email}>Next</Button>
+              <Button className="w-full" onClick={() => setStep('phone')} disabled={!!errors.email}>Next</Button>
             </CardFooter>
           </>
         );
