@@ -1,0 +1,80 @@
+
+{
+  "rules": {
+    "users": {
+      "$userId": {
+        ".read": "auth != null && auth.uid === $userId",
+        ".write": "auth != null && auth.uid === $userId",
+        ".validate": "newData.hasChildren(['email', 'name', 'createdAt'])",
+
+        "email": {
+          ".validate": "newData.isString() && newData.val().matches(/.+@.+\\..+/)"
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0"
+        },
+        "balance": {
+          ".validate": "newData.isNumber()"
+        },
+        "zcashBalance": {
+          ".validate": "newData.isNumber()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+
+        "wallets": {
+          "$walletId": {
+            ".validate": "newData.hasChildren(['name', 'balance', 'type'])"
+          }
+        },
+        "transactions": {
+          "$transactionId": {
+            ".validate": "newData.hasChildren(['amount', 'type', 'description', 'timestamp'])"
+          }
+        },
+        "categories": {
+          "$categoryId": {
+            ".validate": "newData.hasChildren(['name'])"
+          }
+        },
+        "notifications": {
+          "$notificationId": {
+            ".validate": "newData.hasChildren(['message', 'type', 'dateSent'])"
+          }
+        }
+      }
+    },
+    "financeCircles": {
+      "$circleId": {
+        ".read": "root.child('financeCircles').child($circleId).child('members').child(auth.uid).exists()",
+        ".write": "root.child('financeCircles').child($circleId).child('adminUserId').val() === auth.uid",
+        "members": {
+          "$userId": {
+            ".write": "root.child('financeCircles').child($circleId).child('adminUserId').val() === auth.uid || $userId === auth.uid"
+          }
+        }
+      }
+    },
+    "circleMemberships": {
+      "$membershipId": {
+        ".read": "root.child('circleMemberships').child($membershipId).child('userId').val() === auth.uid",
+        ".write": "(newData.exists() && newData.child('userId').val() === auth.uid) || (!data.exists() && root.child('financeCircles').child(newData.child('circleId').val()).child('members').child(auth.uid).exists())"
+      }
+    },
+    "merchants": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "usernames": {
+      "$username": {
+        ".write": "!data.exists() && newData.child('userId').val() === auth.uid"
+      }
+    },
+    "ztags": {
+      "$ztag": {
+        ".write": "!data.exists() && newData.child('userId').val() === auth.uid"
+      }
+    }
+  }
+}
