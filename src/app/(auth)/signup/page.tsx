@@ -95,7 +95,7 @@ export default function SignupPage() {
   
   useEffect(() => {
     const subscription = form.watch(async (value, { name }) => {
-        if (name === 'username' || name === 'ztag') {
+        if (name === 'ztag') {
             setIsChecking(true);
             setIsAvailable(null);
             const fieldValue = value[name];
@@ -161,8 +161,8 @@ export default function SignupPage() {
   };
 
   const handleFinalSignup = async (data: SignupFormData) => {
-    if ((step === 'username' || step === 'ztag') && !isAvailable) {
-        setServerError("The chosen username or @Ztag is not available.");
+    if (step === 'ztag' && !isAvailable) {
+        setServerError("The chosen @Ztag is not available.");
         return;
     }
 
@@ -286,17 +286,11 @@ export default function SignupPage() {
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input id="username" placeholder="alexdoe" {...form.register('username')} />
-                 {isChecking ? (
-                    <p className="text-sm text-muted-foreground flex items-center pt-2"><Icons.logo className="mr-2 h-3 w-3 animate-spin"/> Checking...</p>
-                 ) : errors.username ? (
-                    <p className="text-sm text-destructive pt-2">{errors.username.message}</p>
-                 ) : isAvailable === true ? (
-                     <p className="text-sm text-green-500 pt-2">Username is available!</p>
-                 ) : null}
+                {errors.username && <p className="text-sm text-destructive pt-2">{errors.username.message}</p>}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.username || isChecking || !isAvailable}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.username}>Next</Button>
             </CardFooter>
           </>
         );
@@ -425,5 +419,3 @@ export default function SignupPage() {
     </>
   );
 }
-
-    
