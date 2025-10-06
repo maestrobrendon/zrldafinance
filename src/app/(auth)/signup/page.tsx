@@ -69,12 +69,10 @@ export default function SignupPage() {
   // UI state
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
-  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [skipPhone, setSkipPhone] = useState(false);
 
-  async function checkUniqueness(field: 'username' | 'ztag', value: string): Promise<boolean> {
+  async function checkUniqueness(field: 'ztag', value: string): Promise<boolean> {
       if (!value || !firestore) return false;
       const q = query(collection(firestore, "users"), where(field, "==", value.toLowerCase()));
       const querySnapshot = await getDocs(q);
@@ -82,38 +80,31 @@ export default function SignupPage() {
   }
 
   useEffect(() => {
-    if (step === 'ztag') {
+    const generateUniqueZtag = async () => {
       const { firstName, lastName } = form.getValues();
-      if (firstName && !form.getValues('ztag')) {
+      if (firstName && lastName) {
+        let isUnique = false;
+        let suggestedZtag = '';
+        while (!isUnique) {
           const baseZtag = `${firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}${lastName.charAt(0).toLowerCase()}`;
-          const suggested = `${baseZtag}${Math.floor(100 + Math.random() * 900)}`;
-          form.setValue('ztag', suggested);
-          trigger('ztag');
-      }
-    }
-  }, [step, form, trigger]);
-  
-  useEffect(() => {
-    const subscription = form.watch(async (value, { name }) => {
-        if (name === 'ztag') {
-            setIsChecking(true);
-            setIsAvailable(null);
-            const fieldValue = value[name];
-            if (fieldValue && !errors[name]) {
-                const isUnique = await checkUniqueness(name, fieldValue);
-                setIsAvailable(isUnique);
-                if (!isUnique) {
-                    form.setError(name, { type: "manual", message: `This ${name} is already taken.` });
-                }
-            } else {
-                setIsAvailable(null);
-            }
-            setIsChecking(false);
+          suggestedZtag = `${baseZtag}${Math.floor(100 + Math.random() * 900)}`;
+          // Ensure the generated tag fits the length constraints
+          if (suggestedZtag.length > 15) {
+            suggestedZtag = suggestedZtag.substring(0, 15);
+          }
+          if (suggestedZtag.length < 3) {
+            suggestedZtag = (suggestedZtag + '123').substring(0, 3);
+          }
+          isUnique = await checkUniqueness('ztag', suggestedZtag);
         }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, errors, firestore]);
+        form.setValue('ztag', suggestedZtag, { shouldValidate: true });
+      }
+    };
 
+    if (step === 'ztag' && !form.getValues('ztag')) {
+      generateUniqueZtag();
+    }
+  }, [step, form, firestore]);
 
   const handleNextStep = async () => {
     setServerError(null);
@@ -161,13 +152,15 @@ export default function SignupPage() {
   };
 
   const handleFinalSignup = async (data: SignupFormData) => {
-    if (step === 'ztag' && !isAvailable) {
-        setServerError("The chosen @Ztag is not available.");
-        return;
-    }
-
     setLoading(true);
     setServerError(null);
+    
+    const isZtagUnique = await checkUniqueness('ztag', data.ztag);
+    if (!isZtagUnique) {
+        setServerError("The generated @Ztag is already taken. Please go back and try again.");
+        setLoading(false);
+        return;
+    }
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -354,27 +347,27 @@ export default function SignupPage() {
         return (
           <>
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Choose your @Ztag</CardTitle>
-              <CardDescription>This is your unique username for sending and receiving ZCash.</CardDescription>
+              <CardTitle className="text-2xl">Your Unique @Ztag</CardTitle>
+              <CardDescription>This has been generated for you. This is how friends will find you.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <Label htmlFor="ztag">Your @Ztag</Label>
                 <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
-                    <Input id="ztag" className="pl-6" {...form.register('ztag')} />
+                    <Input id="ztag" className="pl-6" {...form.register('ztag')} disabled />
                 </div>
-                 {isChecking ? (
-                    <p className="text-sm text-muted-foreground flex items-center pt-2"><Icons.logo className="mr-2 h-3 w-3 animate-spin"/> Checking availability...</p>
-                 ) : errors.ztag ? (
+                 {errors.ztag ? (
                     <p className="text-sm text-destructive pt-2">{errors.ztag.message}</p>
-                 ) : isAvailable === true ? (
-                     <p className="text-sm text-green-500 pt-2">@{form.getValues('ztag')} is available!</p>
-                 ) : null}
+                 ) : form.getValues('ztag') ? (
+                    <p className="text-sm text-green-500 pt-2">Your unique @Ztag is assigned!</p>
+                 ) : (
+                    <p className="text-sm text-muted-foreground flex items-center pt-2"><Icons.logo className="mr-2 h-3 w-3 animate-spin"/> Generating your @Ztag...</p>
+                 )}
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={form.handleSubmit(handleFinalSignup)} disabled={loading || isChecking || !!errors.ztag || !isAvailable}>
+              <Button className="w-full" onClick={form.handleSubmit(handleFinalSignup)} disabled={loading || !!errors.ztag || !form.getValues('ztag')}>
                 {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Finish Signup
               </Button>
