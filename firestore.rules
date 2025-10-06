@@ -3,96 +3,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-    
-    // =================================
-    //         USERS
-    // =================================
-    match /users/{userId} {
-      // READ: Anyone can list to check for username/ztag uniqueness, but no one can read a user document directly.
-      // This prevents enumerating user data.
-      allow list: if true;
-      allow get: if isOwner(userId);
-      
-      // CREATE: A user can create their own user document.
-      allow create: if isOwner(userId);
-      
-      // UPDATE, DELETE: A user can only update or delete their own document.
-      allow update, delete: if isOwner(userId);
-      
-      // --- Subcollections ---
-      match /wallets/{walletId} {
-        allow read, write: if isOwner(userId);
-      }
-      
-      match /transactions/{transactionId} {
-        allow read, write: if isOwner(userId);
-      }
-      
-      match /categories/{categoryId} {
-        allow read, write: if isOwner(userId);
-      }
-      
-      match /notifications/{notificationId} {
-        allow read, write: if isOwner(userId);
-      }
-    }
-    
-    // =================================
-    //         FINANCE CIRCLES
-    // =================================
-    match /financeCircles/{circleId} {
-      // READ, WRITE: Only members of the circle can access it.
-      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.members;
-      
-      // CREATE: Any authenticated user can create a circle.
-      allow create: if isAuthenticated();
-    }
-    
-    // =================================
-    //      CIRCLE MEMBERSHIPS
-    // =================================
-    match /circleMemberships/{membershipId} {
-        // READ: User can read their own membership doc.
-        allow read: if isOwner(resource.data.userId);
-        
-        // CREATE: User can create their own membership doc.
-        allow create: if isOwner(request.resource.data.userId);
-        
-        // DELETE: User can delete their own membership (leave a circle).
-        allow delete: if isOwner(resource.data.userId);
-        
-        // No updates allowed to prevent changing circleId or userId.
-        allow update: if false;
-    }
-    
-    // =================================
-    //         MERCHANTS
-    // =================================
-    match /merchants/{merchantId} {
-        // Allow read for all authenticated users for categorization.
-        allow read: if isAuthenticated();
-        // Writes should be handled by a trusted server/admin process.
-        allow write: if false;
-    }
-
-    // =================================
-    //         USERNAMES & ZTAGS (for uniqueness checks)
-    // =================================
-    match /usernames/{username} {
-      allow read, create: if isAuthenticated();
-    }
-
-    match /ztags/{ztag} {
-      allow read, create: if isAuthenticated();
+    // WARNING: These rules are for development only and are insecure.
+    // They allow anyone to read, write, and delete any data in your database.
+    // Replace with secure rules before launching your application.
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
