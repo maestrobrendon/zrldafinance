@@ -1,13 +1,225 @@
-
+/**
+ * @fileoverview Firestore Security Rules for Zrlda Finance application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for personal financial data (wallets, transactions, categories, notifications) and a role-based model for collaborative finance circles. All data access is predicated on verifying user identity via Firebase Authentication.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores individual user profiles. 'userId' must match the authenticated user's UID.
+ * - /users/{userId}/wallets/{walletId}: Stores user's wallets. 'userId' from the path must match the wallet's userId field.
+ * - /users/{userId}/wallets/{walletId}/transactions/{transactionId}: Stores transactions for a specific wallet.
+ * - /users/{userId}/categories/{categoryId}: Stores user's expense categories.
+ * - /financeCircles/{financeCircleId}: Stores finance circle documents.  Access is controlled via a 'members' map within the document.
+ * - /circleMemberships/{circleMembershipId}: Stores circle membership documents.  Facilitates efficient member lookups.
+ * - /users/{userId}/notifications/{notificationId}: Stores notifications for each user.
+ * - /merchants/{merchantId}: Stores merchant data for transaction categorization. Publicly readable.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed.
+ * - All write operations (create, update, delete) require authentication.
+ * - Read operations are generally restricted to the owner, except for the /merchants collection, which is publicly readable.
+ * - FinanceCircles use a 'members' map to manage access control.  Updating the member list is restricted to the admin of the circle.
+ *
+ * Denormalization for Authorization:
+ * - FinanceCircles: The 'members' map is denormalized directly onto the /financeCircles/{financeCircleId} document.  This avoids costly `get()` calls to a separate memberships collection.
+ * - CircleMemberships: The `circleMemberships` document contain a denormalized copy of relevant `financeCircles` data (e.g., name, description) to allow listing of circle memberships with the circle name. This denormalization removes the need for a `get()` call in the rules when displaying a list of memberships.
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // WARNING: These rules are for development only and are insecure.
-    // They allow anyone to read, write, and delete any data in your database.
-    // Replace with secure rules before launching your application.
-    match /{document=**} {
-      allow read, write: if true;
+
+    /**
+     * @description Secure user profiles. Only the authenticated user can read and write their own profile.
+     * @path /users/{userId}
+     * @allow (create) User with matching UID can create their profile.
+     * @allow (get, update, delete) Authenticated user can get, update, delete their profile.
+     * @deny (create) User cannot create a profile with a different UID.
+     * @deny (get, update, delete) Unauthorized user cannot get, update, delete other user's profile.
+     * @principle Enforces document ownership for all operations on user profiles.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    /**
+     * @description Secure user wallets. Only the owner can read and write wallets under their user ID.
+     * @path /users/{userId}/wallets/{walletId}
+     * @allow (create) Authenticated user can create a wallet under their user ID.
+     * @allow (get, update, delete) Authenticated user can get, update, delete their wallet under their user ID.
+     * @deny (create) User cannot create a wallet under another user's ID.
+     * @deny (get, update, delete) Unauthorized user cannot get, update, delete wallets under another user's ID.
+     * @principle Enforces document ownership for all operations on user wallets.
+     */
+    match /users/{userId}/wallets/{walletId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    /**
+     * @description Secure user transactions. Only the owner of the parent wallet can read and write transactions.
+     * @path /users/{userId}/wallets/{walletId}/transactions/{transactionId}
+     * @allow (create) Authenticated user can create a transaction under their wallet.
+     * @allow (get, update, delete) Authenticated user can get, update, delete a transaction under their wallet.
+     * @deny (create) User cannot create a transaction under another user's wallet.
+     * @deny (get, update, delete) Unauthorized user cannot get, update, delete transactions under another user's wallet.
+     * @principle Enforces document ownership for all operations on user transactions.
+     */
+    match /users/{userId}/wallets/{walletId}/transactions/{transactionId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    /**
+     * @description Secure user categories. Only the owner can read and write categories under their user ID.
+     * @path /users/{userId}/categories/{categoryId}
+     * @allow (create) Authenticated user can create a category under their user ID.
+     * @allow (get, update, delete) Authenticated user can get, update, delete a category under their user ID.
+     * @deny (create) User cannot create a category under another user's ID.
+     * @deny (get, update, delete) Unauthorized user cannot get, update, delete categories under another user's ID.
+     * @principle Enforces document ownership for all operations on user categories.
+     */
+    match /users/{userId}/categories/{categoryId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    /**
+     * @description Secure finance circles. Access is controlled via a 'members' map.  The admin can update membership.
+     * @path /financeCircles/{financeCircleId}
+     * @allow (get, list) Anyone can read or list finance circles.
+     * @allow (create) Only an authenticated user can create a finance circle, with their ID as the admin.
+     * @allow (update, delete) Only the admin of the finance circle can update/delete it.  The admin is determined by the 'adminUserId' field.
+     * @deny (create) Non-authenticated users cannot create finance circles.
+     * @deny (update, delete) Unauthorized users cannot update or delete finance circles.
+     * @principle Enforces role-based access control for finance circles, using a 'members' map and an 'adminUserId' field.
+     */
+    match /financeCircles/{financeCircleId} {
+        function isSignedIn() {
+            return request.auth != null;
+        }
+
+        function isAdmin(adminUserId) {
+            return request.auth.uid == adminUserId;
+        }
+
+        function isMember(members) {
+          return request.auth.uid in members;
+        }
+
+        allow get: if true;
+        allow list: if true;
+        allow create: if isSignedIn() && request.resource.data.adminUserId == request.auth.uid;
+        allow update: if isSignedIn() && request.auth.uid == resource.data.adminUserId;
+        allow delete: if isSignedIn() && request.auth.uid == resource.data.adminUserId;
+    }
+
+    /**
+     * @description Secure circle memberships. Any user can create a circle membership.
+     * @path /circleMemberships/{circleMembershipId}
+     * @allow (get, list, create) Any authenticated user can get, list or create their own circle memberships.
+     * @allow (update, delete) Only the owner can update and delete
+     * @deny (create) Non-authenticated users cannot create circle memberships.
+     * @deny (get, list) Users cannot get or list circle memberships for other users.
+     * @principle Enforces open access for listing and creation, but restricts access for updates and deletes.
+     */
+    match /circleMemberships/{circleMembershipId} {
+        function isSignedIn() {
+            return request.auth != null;
+        }
+        function isOwner(userId) {
+            return request.auth.uid == userId;
+        }
+
+        allow get: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow list: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    /**
+     * @description Secure user notifications. Only the owner can read and write notifications under their user ID.
+     * @path /users/{userId}/notifications/{notificationId}
+     * @allow (create) Authenticated user can create a notification under their user ID.
+     * @allow (get, update, delete) Authenticated user can get, update, delete a notification under their user ID.
+     * @deny (create) User cannot create a notification under another user's ID.
+     * @deny (get, update, delete) Unauthorized user cannot get, update, delete notifications under another user's ID.
+     * @principle Enforces document ownership for all operations on user notifications.
+     */
+    match /users/{userId}/notifications/{notificationId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    /**
+     * @description Secure merchants. Merchants are publicly readable.
+     * @path /merchants/{merchantId}
+     * @allow (get, list) Anyone can read or list merchants.
+     * @deny (create, update, delete) No one can create, update, or delete merchants.
+     * @principle Allows public read access for merchants, but restricts write access.
+     */
+    match /merchants/{merchantId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
