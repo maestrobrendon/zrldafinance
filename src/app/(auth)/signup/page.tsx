@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm, type FieldName } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,7 +25,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { OtpLoginForm } from "@/components/auth/otp-login-form";
 import { Checkbox } from "@/components/ui/checkbox";
 
-type Step = 'name' | 'email' | 'username' | 'phone' | 'password' | 'ztag';
+type Step = 'name' | 'email' | 'username' | 'phone' | 'password';
 
 const signupSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters.").regex(/^[a-zA-Z\-]+$/, "Name can only contain letters and hyphens."),
@@ -35,7 +35,6 @@ const signupSchema = z.object({
   phone: z.string().optional(),
   password: z.string().min(8, "Password must be at least 8 characters.").regex(/\d/, "Password must contain at least one number."),
   confirmPassword: z.string(),
-  ztag: z.string().min(3, "@Ztag must be 3-15 characters.").max(15, "@Ztag must be 3-15 characters.").regex(/^[a-z0-9]+$/, "Can only contain lowercase letters and numbers."),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match.",
   path: ["confirmPassword"],
@@ -60,7 +59,6 @@ export default function SignupPage() {
       phone: "",
       password: "",
       confirmPassword: "",
-      ztag: "",
     },
   });
 
@@ -72,41 +70,12 @@ export default function SignupPage() {
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [skipPhone, setSkipPhone] = useState(false);
 
-  async function checkUniqueness(field: 'ztag' | 'username', value: string): Promise<boolean> {
+  async function checkUniqueness(field: 'username', value: string): Promise<boolean> {
       if (!value || !firestore) return false;
       const q = query(collection(firestore, "users"), where(field, "==", value.toLowerCase()));
       const querySnapshot = await getDocs(q);
       return querySnapshot.empty;
   }
-
-  useEffect(() => {
-    const generateUniqueZtag = async () => {
-      const { firstName, lastName } = form.getValues();
-      if (firstName && lastName) {
-        let isUnique = false;
-        let suggestedZtag = '';
-        while (!isUnique) {
-          const baseZtag = `${firstName.toLowerCase().replace(/[^a-z0-9]/g, '')}${lastName.charAt(0).toLowerCase()}`;
-          // Generate a random 3-digit number
-          const randomSuffix = Math.floor(100 + Math.random() * 900);
-          suggestedZtag = `${baseZtag}${randomSuffix}`;
-          // Ensure the generated tag fits the length constraints
-          if (suggestedZtag.length > 15) {
-            suggestedZtag = suggestedZtag.substring(0, 15);
-          }
-          if (suggestedZtag.length < 3) {
-            suggestedZtag = (suggestedZtag + '123').substring(0, 3);
-          }
-          isUnique = await checkUniqueness('ztag', suggestedZtag);
-        }
-        form.setValue('ztag', suggestedZtag, { shouldValidate: true });
-      }
-    };
-
-    if (step === 'ztag' && !form.getValues('ztag')) {
-      generateUniqueZtag();
-    }
-  }, [step, form, firestore]);
 
   const handleNextStep = async () => {
     setServerError(null);
@@ -120,7 +89,7 @@ export default function SignupPage() {
         break;
       case 'email':
         fieldsToValidate = ['email'];
-        nextStep = 'phone';
+        nextStep = 'username';
         break;
       case 'username':
         fieldsToValidate = ['username'];
@@ -134,8 +103,11 @@ export default function SignupPage() {
         break;
       case 'password':
         fieldsToValidate = ['password', 'confirmPassword'];
-        nextStep = 'ztag';
-        break;
+        const isPasswordStepValid = await trigger(fieldsToValidate);
+        if (isPasswordStepValid) {
+            form.handleSubmit(handleFinalSignup)();
+        }
+        return; // Don't set next step, just submit.
     }
     
     const isStepValid = await trigger(fieldsToValidate);
@@ -157,8 +129,13 @@ export default function SignupPage() {
     setLoading(true);
     setServerError(null);
     
-    // The ztag is pre-generated and validated for uniqueness, so we can proceed.
-    // An extra check can be added here for robustness if desired.
+    const isUsernameUnique = await checkUniqueness('username', data.username);
+    if (!isUsernameUnique) {
+        setServerError("This username is already taken. Please choose another.");
+        setLoading(false);
+        setStep('username');
+        return;
+    }
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -180,7 +157,6 @@ export default function SignupPage() {
             name: `${data.firstName} ${data.lastName}`,
             phone: data.phone || null,
             photoURL: newPhotoURL,
-            ztag: data.ztag.toLowerCase(),
             balance: 50000,
             zcashBalance: 10000,
             kycStatus: 'pending',
@@ -262,7 +238,7 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={() => setStep('phone')} disabled={!!errors.email}>Next</Button>
+              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.email}>Next</Button>
             </CardFooter>
           </>
         );
@@ -337,35 +313,7 @@ export default function SignupPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleNextStep} disabled={!!errors.password || !!errors.confirmPassword}>Next</Button>
-            </CardFooter>
-          </>
-        );
-      case 'ztag':
-        return (
-          <>
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Your Unique @Ztag</CardTitle>
-              <CardDescription>This has been generated for you. This is how friends will find you.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="ztag">Your @Ztag</Label>
-                <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
-                    <Input id="ztag" className="pl-6" {...form.register('ztag')} disabled />
-                </div>
-                 {errors.ztag ? (
-                    <p className="text-sm text-destructive pt-2">{errors.ztag.message}</p>
-                 ) : form.getValues('ztag') ? (
-                    <p className="text-sm text-green-500 pt-2">Your unique @Ztag is assigned!</p>
-                 ) : (
-                    <p className="text-sm text-muted-foreground flex items-center pt-2"><Icons.logo className="mr-2 h-3 w-3 animate-spin"/> Generating your @Ztag...</p>
-                 )}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" onClick={form.handleSubmit(handleFinalSignup)} disabled={loading || !!errors.ztag || !form.getValues('ztag')}>
+              <Button className="w-full" onClick={handleNextStep} disabled={loading || !!errors.password || !!errors.confirmPassword}>
                 {loading ? <Icons.logo className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Finish Signup
               </Button>
@@ -381,7 +329,6 @@ export default function SignupPage() {
           case 'username': return 'email';
           case 'phone': return 'username';
           case 'password': return 'phone';
-          case 'ztag': return 'password';
           default: return 'name';
       }
   }

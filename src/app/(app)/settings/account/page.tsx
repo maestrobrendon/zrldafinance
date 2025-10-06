@@ -22,14 +22,14 @@ export default function AccountSettingsPage() {
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
-    const [ztag, setZtag] = useState("");
+    const [username, setUsername] = useState("");
     const [phone, setPhone] = useState("");
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>('');
     const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [isSaving, setIsSaving] = useState(false);
-    const [canEditZtag, setCanEditZtag] = useState(true);
+    const [canEditUsername, setCanEditUsername] = useState(true);
 
     useEffect(() => {
         if (user && firestore) {
@@ -41,16 +41,16 @@ export default function AccountSettingsPage() {
             getDoc(userDocRef).then(userDoc => {
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    setZtag(userData.ztag || "");
+                    setUsername(userData.username || "");
                     setPhone(userData.phone || "");
 
-                    // Implement logic to check if ztag can be edited (once a month)
-                    const lastUpdated = userData.ztagLastUpdated?.toDate();
+                    // Implement logic to check if username can be edited (once a month)
+                    const lastUpdated = userData.usernameLastUpdated?.toDate();
                     if (lastUpdated) {
                         const oneMonthAgo = new Date();
                         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
                         if (lastUpdated > oneMonthAgo) {
-                            setCanEditZtag(false);
+                            setCanEditUsername(false);
                         }
                     }
                 }
@@ -83,10 +83,10 @@ export default function AccountSettingsPage() {
                 name: name,
                 photoURL: newPhotoURL,
                 phone: phone,
-                ztag: ztag,
+                username: username,
                 updatedAt: serverTimestamp(),
-                // If ztag was changed, update the timestamp
-                // ztagLastUpdated: serverTimestamp() 
+                // If username was changed, update the timestamp
+                // usernameLastUpdated: serverTimestamp() 
             }, { merge: true });
 
             setAvatarUrl(newPhotoURL); // Update local state to reflect new URL
@@ -176,9 +176,9 @@ export default function AccountSettingsPage() {
                              <p className="text-xs text-muted-foreground">Email address cannot be changed in this prototype.</p>
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="ztag">@Ztag</Label>
-                            <Input id="ztag" value={ztag} onChange={(e) => setZtag(e.target.value)} disabled={!canEditZtag || isSaving} />
-                            {!canEditZtag && <p className="text-xs text-muted-foreground">You can only change your @Ztag once every 30 days.</p>}
+                            <Label htmlFor="username">Username</Label>
+                            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} disabled={!canEditUsername || isSaving} />
+                            {!canEditUsername && <p className="text-xs text-muted-foreground">You can only change your username once every 30 days.</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phone">Phone Number</Label>
@@ -229,5 +229,3 @@ export default function AccountSettingsPage() {
         </div>
     )
 }
-
-    

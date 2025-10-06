@@ -70,11 +70,6 @@
       "$username": {
         ".write": "!data.exists() && newData.child('userId').val() === auth.uid"
       }
-    },
-    "ztags": {
-      "$ztag": {
-        ".write": "!data.exists() && newData.child('userId').val() === auth.uid"
-      }
     }
   }
 }
